@@ -461,10 +461,12 @@ void reloadConfig() {
 
     for (auto& widget : g_overviewWidgets) {
         widget->updateConfig();
-        widget->hide();
-        IPointer::SSwipeEndEvent dummy;
-        dummy.cancelled = true;
-        widget->endSwipe(dummy);
+        if (widget->isActive() || widget->isSwiping()) {
+            widget->hide();
+            IPointer::SSwipeEndEvent dummy;
+            dummy.cancelled = true;
+            widget->endSwipe(dummy);
+        }
     }
 
     Config::dragAlpha = getConfigValueOr<Hyprlang::FLOAT>("plugin:overview:dragAlpha", Config::dragAlpha);
