@@ -1,9 +1,26 @@
 local M = {}
+local HOME = os.getenv("HOME") or ""
 
--- Keep the plugin path local to this helper so the rest of the config only has
--- to call `require(...).setup()`.
-local PLUGIN_PATH = HOME .. "/.config/hypr/edit_here/Hyprspace/Hyprspace.so"
 local MATUGEN_PATH = HOME .. "/.config/matugen/generated/hyprland-colors.lua"
+local pluginPath = os.getenv("HYPRSPACE_PLUGIN_PATH")
+
+local function file_exists(path)
+    if type(path) ~= "string" or path == "" then
+        return false
+    end
+
+    local file = io.open(path, "r")
+    if not file then
+        return false
+    end
+
+    file:close()
+    return true
+end
+
+local function shell_quote(value)
+    return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
 
 local function load_lua_file(path)
     local env = {}
@@ -67,9 +84,10 @@ local function build_config()
                 workspace_inactive_border     = color_with_alpha(colors.outline_variant or colors.outline, 0x55, 0x55504348),
 
                 -- Layout tuning:
-                -- `panel_height` controls thumbnail height.
-                -- `reserved_area` should roughly match the current Waybar height.
-                panel_height                   = 240,
+                -- Keep the overview compact and reserve only the Waybar strip.
+                -- `panel_height` is the visible overview height.
+                -- `reserved_area` is the top gap already occupied by Waybar.
+                panel_height                   = 220,
                 panel_border_width             = 2,
                 workspace_margin               = 10,
                 reserved_area                  = 35,
@@ -127,9 +145,18 @@ local function ensure_plugin_loaded()
         return true
     end
 
-    -- Load on session start when the plugin has not been restored by hyprpm.
-    hl.exec_cmd("hyprctl plugin load " .. PLUGIN_PATH)
+    -- hyprpm restores plugins itself. Only fall back to a manual binary path
+    -- when one was explicitly provided.
+    if not file_exists(pluginPath) then
+        return false
+    end
+
+    hl.exec_cmd("hyprctl plugin load " .. shell_quote(pluginPath))
     return plugin_loaded()
+end
+
+function M.set_plugin_path(path)
+    pluginPath = path
 end
 
 function M.apply_config()
@@ -160,10 +187,15 @@ function M.toggle()
     return M.overview("toggle")
 end
 
-function M.setup()
+function M.setup(opts)
+    if type(opts) == "table" and type(opts.plugin_path) == "string" then
+        pluginPath = opts.plugin_path
+    end
+
     -- Startup path:
-    -- 1. try loading the plugin binary
-    -- 2. apply the latest Lua config
+    -- 1. hyprpm-managed plugins are already loaded by Hyprland
+    -- 2. local/manual installs can opt-in by passing `plugin_path`
+    -- 3. apply the latest Lua config once the plugin is available
     hl.on("hyprland.start", function()
         ensure_plugin_loaded()
         M.apply_config()
