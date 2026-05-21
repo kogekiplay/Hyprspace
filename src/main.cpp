@@ -25,6 +25,7 @@ extern "C" {
 #include "Overview.hpp"
 
 void* pRenderWindow;
+void* pRenderLayer;
 
 std::vector<std::shared_ptr<CHyprspaceWidget>> g_overviewWidgets;
 
@@ -625,6 +626,10 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE inHandle) {
     if (!pRenderWindow)
         pRenderWindow = findFunctionBySymbol(pHandle, "renderWindow", "CHyprRenderer::renderWindow");
 
+    pRenderLayer = findFunctionBySymbol(pHandle, "renderLayer", "IHyprRenderer::renderLayer");
+    if (!pRenderLayer)
+        pRenderLayer = findFunctionBySymbol(pHandle, "renderLayer", "CHyprRenderer::renderLayer");
+
     registerMonitors();
     g_pAddMonitorHook    = Event::bus()->m_events.monitor.added.listen([](PHLMONITOR) { registerMonitors(); });
     g_pRemoveMonitorHook = Event::bus()->m_events.monitor.removed.listen([](PHLMONITOR monitor) { removeMonitorWidget(monitor); });
@@ -658,5 +663,6 @@ APICALL EXPORT void PLUGIN_EXIT() {
     g_overviewWidgets.clear();
 
     pRenderWindow = nullptr;
+    pRenderLayer  = nullptr;
     pHandle       = nullptr;
 }

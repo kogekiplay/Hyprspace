@@ -22,6 +22,14 @@ double shownSwipeOffset(PHLMONITOR owner) {
     return panelTravelForMonitor(owner);
 }
 
+void requestFullMonitorRedraw(PHLMONITOR owner) {
+    if (!owner)
+        return;
+
+    owner->m_damage.damageEntire();
+    g_pCompositor->scheduleFrameForMonitor(owner);
+}
+
 } // namespace
 
 CHyprspaceWidget::CHyprspaceWidget(uint64_t inOwnerID) : ownerID(inOwnerID) {
@@ -91,7 +99,7 @@ void CHyprspaceWidget::cleanup(PHLMONITOR owner) {
         owner->m_reservedArea = Desktop::CReservedArea();
         g_pHyprRenderer->arrangeLayersForMonitor(ownerID);
         g_layoutManager->recalculateMonitor(owner);
-        g_pCompositor->scheduleFrameForMonitor(owner);
+        requestFullMonitorRedraw(owner);
     }
 }
 
@@ -144,7 +152,7 @@ void CHyprspaceWidget::show() {
 
     updateLayout();
     g_pHyprRenderer->damageMonitor(owner);
-    g_pCompositor->scheduleFrameForMonitor(owner);
+    requestFullMonitorRedraw(owner);
 }
 
 void CHyprspaceWidget::hide() {
@@ -163,7 +171,7 @@ void CHyprspaceWidget::hide() {
     }
 
     updateLayout();
-    g_pCompositor->scheduleFrameForMonitor(owner);
+    requestFullMonitorRedraw(owner);
 }
 
 void CHyprspaceWidget::updateConfig() {

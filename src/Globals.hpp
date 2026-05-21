@@ -41,7 +41,9 @@ CHyprSignalListener listenCancellable(Signal& signal, std::function<void(const E
 inline HANDLE pHandle = NULL;
 
 typedef void (*tRenderWindow)(void*, PHLWINDOW, PHLMONITOR, const Time::steady_tp&, bool, Render::eRenderPassMode, bool, bool);
+typedef void (*tRenderLayer)(void*, PHLLS, PHLMONITOR, const Time::steady_tp&, bool, bool);
 extern void* pRenderWindow;
+extern void* pRenderLayer;
 namespace Config {
     extern CHyprColor panelBaseColor;
     extern CHyprColor panelBorderColor;
