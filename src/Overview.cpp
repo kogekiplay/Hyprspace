@@ -52,7 +52,7 @@ void CHyprspaceWidget::restoreFullscreenWindows() {
         if (!window)
             continue;
 
-        g_pCompositor->setWindowFullscreenState(window, Desktop::View::SFullscreenState(fullscreenMode));
+        g_pCompositor->setWindowFullscreenState(window, Desktop::View::SFullscreenState{.internal = fullscreenMode, .client = fullscreenMode});
         if (fullscreenMode == FSMODE_FULLSCREEN)
             window->m_wantsInitialFullscreen = false;
     }

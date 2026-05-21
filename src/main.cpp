@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <any>
 
 #include <hyprland/src/config/ConfigValue.hpp>
 #include <hyprland/src/config/values/types/BoolValue.hpp>
@@ -26,7 +25,6 @@ extern "C" {
 #include "Overview.hpp"
 
 void* pRenderWindow;
-void* pRenderLayer;
 
 std::vector<std::shared_ptr<CHyprspaceWidget>> g_overviewWidgets;
 
@@ -51,9 +49,6 @@ bool        Config::hideOverlayLayers       = false;
 bool        Config::drawActiveWorkspace     = true;
 bool        Config::hideRealLayers          = false;
 bool        Config::affectStrut             = false;
-bool        Config::overrideGaps            = true;
-int         Config::gapsIn                  = 20;
-int         Config::gapsOut                 = 60;
 bool        Config::autoDrag                = true;
 bool        Config::autoScroll              = true;
 bool        Config::exitOnClick             = true;
@@ -106,16 +101,13 @@ using Config::Values::CColorValue;
 using Config::Values::CFloatValue;
 using Config::Values::CIntValue;
 using Config::Values::CStringValue;
-using Config::Values::IValue;
-
-constexpr const char* PLUGIN_PREFIX = "plugin:hyprspace:";
 
 struct SPluginConfigValues {
     SP<CColorValue> panelColor, panelBorderColor, workspaceActiveBackground, workspaceInactiveBackground, workspaceActiveBorder, workspaceInactiveBorder;
     SP<CIntValue>   panelHeight, panelBorderWidth, workspaceMargin, reservedArea, workspaceBorderSize;
     SP<CBoolValue>  adaptiveHeight, centerAligned, onBottom, hideBackgroundLayers, hideTopLayers, hideOverlayLayers, drawActiveWorkspace, hideRealLayers, affectStrut;
-    SP<CBoolValue>  overrideGaps, autoDrag, autoScroll, exitOnClick, switchOnDrop, exitOnSwitch, showNewWorkspace, showEmptyWorkspace, showSpecialWorkspace;
-    SP<CIntValue>   gapsIn, gapsOut, swipeFingers, swipeDistance, swipeForceSpeed, clickReleaseThresholdMs;
+    SP<CBoolValue>  autoDrag, autoScroll, exitOnClick, switchOnDrop, exitOnSwitch, showNewWorkspace, showEmptyWorkspace, showSpecialWorkspace;
+    SP<CIntValue>   swipeFingers, swipeDistance, swipeForceSpeed, clickReleaseThresholdMs;
     SP<CBoolValue>  disableGestures, reverseSwipe, disableBlur;
     SP<CFloatValue> swipeCancelRatio, swipeThreshold, swipeClosedPadding, workspaceScrollSpeed, overrideAnimSpeed, dragAlpha;
     SP<CStringValue> exitKey;
@@ -204,10 +196,6 @@ void registerConfigValues() {
     g_pluginConfigValues.hideRealLayers       = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:hide_real_layers", "Temporarily hide real top and overlay layers while overview is active", Config::hideRealLayers)));
     g_pluginConfigValues.affectStrut          = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:affect_strut", "Reserve monitor space while the overview is visible", Config::affectStrut)));
 
-    g_pluginConfigValues.overrideGaps       = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:override_gaps", "Override workspace gaps while the overview is visible", Config::overrideGaps)));
-    g_pluginConfigValues.gapsIn             = registerPluginValue(SP<CIntValue>(new CIntValue("plugin:hyprspace:gaps_in", "Inner gaps to use while overview is active", Config::gapsIn)));
-    g_pluginConfigValues.gapsOut            = registerPluginValue(SP<CIntValue>(new CIntValue("plugin:hyprspace:gaps_out", "Outer gaps to use while overview is active", Config::gapsOut)));
-
     g_pluginConfigValues.autoDrag           = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:auto_drag", "Start dragging a hovered window on press", Config::autoDrag)));
     g_pluginConfigValues.autoScroll         = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:auto_scroll", "Allow wheel scrolling outside the panel to switch workspaces", Config::autoScroll)));
     g_pluginConfigValues.exitOnClick        = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:exit_on_click", "Close the overview when clicking outside a workspace", Config::exitOnClick)));
@@ -295,6 +283,11 @@ void onRender(eRenderStage renderStage) {
         const auto dragTarget = g_layoutManager->dragController()->target();
         const auto curWindow  = dragTarget ? dragTarget->window() : nullptr;
         if (!curWindow) {
+            g_oAlpha = -1;
+            return;
+        }
+
+        if (!pRenderWindow) {
             g_oAlpha = -1;
             return;
         }
@@ -548,10 +541,6 @@ void reloadConfig() {
     Config::hideRealLayers       = readBoolValue(g_pluginConfigValues.hideRealLayers, Config::hideRealLayers);
     Config::affectStrut          = readBoolValue(g_pluginConfigValues.affectStrut, Config::affectStrut);
 
-    Config::overrideGaps         = readBoolValue(g_pluginConfigValues.overrideGaps, Config::overrideGaps);
-    Config::gapsIn               = readIntValue(g_pluginConfigValues.gapsIn, Config::gapsIn);
-    Config::gapsOut              = readIntValue(g_pluginConfigValues.gapsOut, Config::gapsOut);
-
     Config::autoDrag             = readBoolValue(g_pluginConfigValues.autoDrag, Config::autoDrag);
     Config::autoScroll           = readBoolValue(g_pluginConfigValues.autoScroll, Config::autoScroll);
     Config::exitOnClick          = readBoolValue(g_pluginConfigValues.exitOnClick, Config::exitOnClick);
@@ -636,10 +625,6 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE inHandle) {
     if (!pRenderWindow)
         pRenderWindow = findFunctionBySymbol(pHandle, "renderWindow", "CHyprRenderer::renderWindow");
 
-    pRenderLayer = findFunctionBySymbol(pHandle, "renderLayer", "IHyprRenderer::renderLayer");
-    if (!pRenderLayer)
-        pRenderLayer = findFunctionBySymbol(pHandle, "renderLayer", "CHyprRenderer::renderLayer");
-
     registerMonitors();
     g_pAddMonitorHook    = Event::bus()->m_events.monitor.added.listen([](PHLMONITOR) { registerMonitors(); });
     g_pRemoveMonitorHook = Event::bus()->m_events.monitor.removed.listen([](PHLMONITOR monitor) { removeMonitorWidget(monitor); });
@@ -673,6 +658,5 @@ APICALL EXPORT void PLUGIN_EXIT() {
     g_overviewWidgets.clear();
 
     pRenderWindow = nullptr;
-    pRenderLayer  = nullptr;
     pHandle       = nullptr;
 }

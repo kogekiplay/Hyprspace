@@ -42,8 +42,6 @@ inline HANDLE pHandle = NULL;
 
 typedef void (*tRenderWindow)(void*, PHLWINDOW, PHLMONITOR, const Time::steady_tp&, bool, Render::eRenderPassMode, bool, bool);
 extern void* pRenderWindow;
-typedef void (*tRenderLayer)(void*, PHLLS, PHLMONITOR, const Time::steady_tp&, bool, bool);
-extern void* pRenderLayer;
 namespace Config {
     extern CHyprColor panelBaseColor;
     extern CHyprColor panelBorderColor;
@@ -57,19 +55,15 @@ namespace Config {
     extern int workspaceMargin;
     extern int reservedArea;
     extern int workspaceBorderSize;
-    extern bool adaptiveHeight; // TODO: implement
+    extern bool adaptiveHeight;
     extern bool centerAligned;
-    extern bool onBottom; // TODO: implement
+    extern bool onBottom;
     extern bool hideBackgroundLayers;
     extern bool hideTopLayers;
     extern bool hideOverlayLayers;
     extern bool drawActiveWorkspace;
     extern bool hideRealLayers;
     extern bool affectStrut;
-
-    extern bool overrideGaps;
-    extern int gapsIn;
-    extern int gapsOut;
 
     extern bool autoDrag;
     extern bool autoScroll;
