@@ -19,93 +19,107 @@ This fork is adapted for current Hyprland with Lua-based configuration instead o
 - Hyprland development headers / pkg-config metadata for manual builds
 - A recent C++ compiler with C++23 support
 
-## Installation
+## Setup
 
-### Manual install
+### `hyprpm` auto setup
 
-Build the plugin from the repo root:
+Install and enable the plugin:
 
 ```bash
-cd ~/.config/Hyprspace
+hyprpm add https://github.com/0xl30/Hyprspace.git
+hyprpm enable Hyprspace
+hyprpm reload
+```
+
+Then in [source/plugins.lua](/home/xlord/.config/hypr/edit_here/source/plugins.lua):
+
+```lua
+require("edit_here.Hyprspace.Hyprspace").setup("auto")
+```
+
+Reload Hyprland:
+
+```bash
+hyprctl reload
+```
+
+### Manual `hyprctl` setup
+
+Build the local plugin:
+
+```bash
+cd ~/.config/hypr/edit_here/Hyprspace
 make all
 ```
 
-That produces:
+This creates:
 
 ```text
-~/.config/Hyprspace/Hyprspace.so
+~/.config/hypr/edit_here/Hyprspace/Hyprspace.so
 ```
 
 Load it manually:
 
 ```bash
-hyprctl plugin load ~/.config/Hyprspace/Hyprspace.so
+hyprctl plugin load ~/.config/hypr/edit_here/Hyprspace/Hyprspace.so
 ```
 
-To unload it:
+Then in [source/plugins.lua](/home/xlord/.config/hypr/edit_here/source/plugins.lua):
+
+```lua
+local HOME = os.getenv("HOME") or ""
+
+require("edit_here.Hyprspace.Hyprspace").setup({
+    plugin_path = HOME .. "/.config/hypr/edit_here/Hyprspace/Hyprspace.so",
+})
+```
+
+Reload after Lua changes:
 
 ```bash
-hyprctl plugin unload ~/.config/Hyprspace/Hyprspace.so
+hyprctl reload
 ```
 
-### `hyprpm` install
-
-If this repo is pushed to Git and the updated [hyprpm.toml](./hyprpm.toml) is included, install it with:
+Unload manually if needed:
 
 ```bash
-hyprpm add https://github.com/0xl30/Hyprspace.git
-hyprpm enable Hyprspace
+hyprctl plugin unload ~/.config/hypr/edit_here/Hyprspace/Hyprspace.so
 ```
-
-Examples:
-
-```bash
-hyprpm add https://github.com/0xl30/Hyprspace.git
-hyprpm enable Hyprspace
-```
-
-Notes:
-
-- `hyprpm` matches your Hyprland commit against `commit_pins` in `hyprpm.toml`.
-- For Hyprland `v0.55.2`, this repo already includes a matching pin.
-- After updating plugin code, commit and push before expecting `hyprpm` to fetch the new version.
 
 ## Lua setup
 
 ### 1. Plugin helper
 
-Add this to start-up [plugins.lua](../plugins.lua):
+Use one of these in [source/plugins.lua](/home/xlord/.config/hypr/edit_here/source/plugins.lua):
+
+`hyprpm` / auto:
 
 ```lua
-require("Hyprspace.Hyprspace").setup()
+require("edit_here.Hyprspace.Hyprspace").setup("auto")
 ```
 
-This is the preferred setup for `hyprpm` installs and already-loaded plugins.
-
-If you want local manual loading from the Lua helper instead of loading the `.so` yourself, use:
+Manual local `.so`:
 
 ```lua
-require("Hyprspace.Hyprspace").setup({
-    plugin_path = HOME .. "/.config/Hyprspace/Hyprspace.so",
+local HOME = os.getenv("HOME") or ""
+
+require("edit_here.Hyprspace.Hyprspace").setup({
+    plugin_path = HOME .. "/.config/hypr/edit_here/Hyprspace/Hyprspace.so",
 })
 ```
 
-Use that only for a manual local build. Do not pass `plugin_path` when the plugin is managed by `hyprpm`.
-
 ### 2. Keybind
 
-Add a keybind in [keybinds.lua](../keybinds.lua):
+Add a keybind in [source/keybinds.lua](/home/xlord/.config/hypr/edit_here/source/keybinds.lua):
 
 ```lua
+local hyprspace = require("edit_here.Hyprspace.Hyprspace")
+
 hl.unbind("SUPER + A")
 hl.bind("SUPER + A", function()
-    if hl.plugin and hl.plugin.Hyprspace and type(hl.plugin.Hyprspace.overview) == "function" then
-        hl.plugin.Hyprspace.overview("toggle")
-    end
+    hyprspace.toggle()
 end)
 ```
-
-This file does not need to `require(...)` the helper directly.
 
 ### 3. Reload
 
@@ -118,10 +132,10 @@ hyprctl reload
 After rebuilding the plugin binary:
 
 ```bash
-cd ~/.config/Hyprspace
+cd ~/.config/hypr/edit_here/Hyprspace
 make all
-hyprctl plugin unload ~/.config/Hyprspace/Hyprspace.so
-hyprctl plugin load ~/.config/Hyprspace/Hyprspace.so
+hyprctl plugin unload ~/.config/hypr/edit_here/Hyprspace/Hyprspace.so
+hyprctl plugin load ~/.config/hypr/edit_here/Hyprspace/Hyprspace.so
 hyprctl reload
 ```
 
@@ -140,7 +154,7 @@ hyprctl reload
 The helper module exports:
 
 ```lua
-local hyprspace = require("Hyprspace.Hyprspace")
+local hyprspace = require("edit_here.Hyprspace.Hyprspace")
 
 hyprspace.setup()
 hyprspace.apply_config()
@@ -162,7 +176,7 @@ hl.plugin.Hyprspace.overview("close")
 
 ## Configuration
 
-The plugin is configured from [Hyprspace.lua](./Hyprspace.lua). The helper builds a Lua config table and applies it through `hl.config(...)`.
+The plugin is configured from [Hyprspace.lua](./Hyprspace.lua). The helper reads Matugen colors from `IMPORT_COLOR`, builds a Lua config table, and applies it through `hl.config(...)`.
 
 ### Example
 
@@ -180,10 +194,6 @@ plugin = {
         draw_active_workspace = true,
         hide_real_layers = false,
         affect_strut = false,
-
-        override_gaps = true,
-        gaps_in = 20,
-        gaps_out = 60,
 
         auto_drag = true,
         auto_scroll = true,
@@ -229,9 +239,6 @@ plugin = {
 - `draw_active_workspace`
 - `hide_real_layers`
 - `affect_strut`
-- `override_gaps`
-- `gaps_in`
-- `gaps_out`
 
 #### Behavior
 
@@ -281,17 +288,17 @@ The helper converts Matugen `rgba(rrggbbaa)` strings into the integer color form
 Check that the plugin is actually loaded:
 
 ```bash
-hyprctl plugins
+hyprctl plugin list
 ```
 
 If you are using a manual build, load the `.so` first.
 
 ### Lua settings are not applied
 
-Make sure [source/plugins.lua](../plugins.lua) calls:
+Make sure [source/plugins.lua](/home/xlord/.config/hypr/edit_here/source/plugins.lua) calls:
 
 ```lua
-require("Hyprspace.Hyprspace").setup()
+require("edit_here.Hyprspace.Hyprspace").setup("auto")
 ```
 
 Then run:
