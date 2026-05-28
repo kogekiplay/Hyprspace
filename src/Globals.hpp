@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <string>
 #include <tuple>
 #include <type_traits>
 
@@ -40,8 +41,8 @@ CHyprSignalListener listenCancellable(Signal& signal, std::function<void(const E
 inline HANDLE pHandle = NULL;
 
 typedef void (*tRenderWindow)(void*, PHLWINDOW, PHLMONITOR, const Time::steady_tp&, bool, Render::eRenderPassMode, bool, bool);
-extern void* pRenderWindow;
 typedef void (*tRenderLayer)(void*, PHLLS, PHLMONITOR, const Time::steady_tp&, bool, bool);
+extern void* pRenderWindow;
 extern void* pRenderLayer;
 namespace Config {
     extern CHyprColor panelBaseColor;
@@ -56,19 +57,15 @@ namespace Config {
     extern int workspaceMargin;
     extern int reservedArea;
     extern int workspaceBorderSize;
-    extern bool adaptiveHeight; // TODO: implement
+    extern bool adaptiveHeight;
     extern bool centerAligned;
-    extern bool onBottom; // TODO: implement
+    extern bool onBottom;
     extern bool hideBackgroundLayers;
     extern bool hideTopLayers;
     extern bool hideOverlayLayers;
     extern bool drawActiveWorkspace;
     extern bool hideRealLayers;
     extern bool affectStrut;
-
-    extern bool overrideGaps;
-    extern int gapsIn;
-    extern int gapsOut;
 
     extern bool autoDrag;
     extern bool autoScroll;
@@ -85,6 +82,16 @@ namespace Config {
     extern bool disableBlur;
     extern float overrideAnimSpeed;
     extern float dragAlpha;
+    extern std::string exitKey;
+
+    extern int clickReleaseThresholdMs;
+    extern int swipeFingers;
+    extern int swipeDistance;
+    extern int swipeForceSpeed;
+    extern float swipeCancelRatio;
+    extern float swipeThreshold;
+    extern float swipeClosedPadding;
+    extern float workspaceScrollSpeed;
 }
 
 extern int numWorkspaces;
