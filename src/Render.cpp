@@ -79,6 +79,15 @@ void renderWindowStub(PHLWINDOW window, PHLMONITOR monitor, PHLWORKSPACE workspa
     window->m_pinned     = true;
     window->m_ruleApplicator->rounding().set(window->rounding() * scaleMod * monitor->m_scale, Desktop::Types::PRIORITY_SET_PROP);
 
+    Hyprutils::Utils::CScopeGuard restoreWindowState([&] {
+        window->m_workspace       = workspace;
+        window->m_fullscreenState = fullscreenState;
+        window->m_ruleApplicator->nearestNeighbor().unset(Desktop::Types::PRIORITY_SET_PROP);
+        window->m_isFloating = floating;
+        window->m_pinned     = pinned;
+        window->m_ruleApplicator->rounding().unset(Desktop::Types::PRIORITY_SET_PROP);
+    });
+
     g_pHyprRenderer->m_renderPass.add(makeUnique<CRendererHintsPassElement>(CRendererHintsPassElement::SData{.renderModif = renderModif}));
     Hyprutils::Utils::CScopeGuard clearHints([] {
         g_pHyprRenderer->m_renderPass.add(makeUnique<CRendererHintsPassElement>(CRendererHintsPassElement::SData{.renderModif = Render::SRenderModifData{}}));
@@ -87,13 +96,6 @@ void renderWindowStub(PHLWINDOW window, PHLMONITOR monitor, PHLWORKSPACE workspa
     g_pHyprRenderer->damageWindow(window);
     if (pRenderWindow)
         (*(tRenderWindow)pRenderWindow)(g_pHyprRenderer.get(), window, monitor, time, true, Render::RENDER_PASS_ALL, false, false);
-
-    window->m_workspace = workspace;
-    window->m_fullscreenState = fullscreenState;
-    window->m_ruleApplicator->nearestNeighbor().unset(Desktop::Types::PRIORITY_SET_PROP);
-    window->m_isFloating = floating;
-    window->m_pinned     = pinned;
-    window->m_ruleApplicator->rounding().unset(Desktop::Types::PRIORITY_SET_PROP);
 }
 
 void renderLayerStub(PHLLS layer, PHLMONITOR monitor, CBox rectOverride, const Time::steady_tp& time) {
@@ -151,11 +153,14 @@ bool renderWindowPreview(PHLWINDOW window, PHLWORKSPACE workspace, PHLMONITOR ow
 void CHyprspaceWidget::draw() {
     workspaceBoxes.clear();
 
+    if (g_pCompositor->m_unsafeState)
+        return;
+
     if (!active && !curYOffset->isBeingAnimated())
         return;
 
     const auto owner = getOwner();
-    if (!owner)
+    if (!owner || !owner->m_enabled)
         return;
 
     const CBox monitorClip = {{0, 0}, owner->m_transformedSize};

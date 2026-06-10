@@ -109,7 +109,7 @@ PHLMONITOR CHyprspaceWidget::getOwner() {
 
 void CHyprspaceWidget::show() {
     auto owner = getOwner();
-    if (!owner)
+    if (!owner || !owner->m_enabled || g_pCompositor->m_unsafeState)
         return;
 
     if (prevFullscreen.empty()) {

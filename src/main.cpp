@@ -90,6 +90,7 @@ CHyprSignalListener g_pSwipeEndHook;
 CHyprSignalListener g_pKeyPressHook;
 CHyprSignalListener g_pSwitchWorkspaceHook;
 CHyprSignalListener g_pAddMonitorHook;
+CHyprSignalListener g_pPreRemoveMonitorHook;
 CHyprSignalListener g_pRemoveMonitorHook;
 CHyprSignalListener g_pStartHook;
 
@@ -154,9 +155,27 @@ void endSwipeIfNeeded(const std::shared_ptr<CHyprspaceWidget>& widget) {
     widget->endSwipe(cancelled);
 }
 
-void removeMonitorWidget(PHLMONITOR monitor) {
+void teardownMonitorWidget(PHLMONITOR monitor) {
     if (!monitor)
         return;
+
+    for (auto& widget : g_overviewWidgets) {
+        if (!widget)
+            continue;
+
+        const auto owner = widget->getOwner();
+        if (owner && owner != monitor)
+            continue;
+
+        endSwipeIfNeeded(widget);
+        if (widget->isActive())
+            widget->hide();
+        widget->cleanup(monitor);
+    }
+}
+
+void removeMonitorWidget(PHLMONITOR monitor) {
+    teardownMonitorWidget(monitor);
 
     g_overviewWidgets.erase(std::remove_if(g_overviewWidgets.begin(), g_overviewWidgets.end(),
                                            [monitor](const std::shared_ptr<CHyprspaceWidget>& widget) {
@@ -164,10 +183,6 @@ void removeMonitorWidget(PHLMONITOR monitor) {
                                                    return true;
 
                                                const auto owner = widget->getOwner();
-                                               if (owner && owner != monitor)
-                                                   return false;
-
-                                               widget->cleanup(monitor);
                                                return owner == monitor || !owner;
                                            }),
                             g_overviewWidgets.end());
@@ -252,6 +267,9 @@ bool  g_layoutNeedsRefresh = true;
 float g_oAlpha             = -1;
 
 void onRender(eRenderStage renderStage) {
+    if (g_pCompositor->m_unsafeState)
+        return;
+
     if (renderStage == eRenderStage::RENDER_PRE) {
         if (g_layoutNeedsRefresh) {
             refreshWidgets();
@@ -631,8 +649,9 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE inHandle) {
         pRenderLayer = findFunctionBySymbol(pHandle, "renderLayer", "CHyprRenderer::renderLayer");
 
     registerMonitors();
-    g_pAddMonitorHook    = Event::bus()->m_events.monitor.added.listen([](PHLMONITOR) { registerMonitors(); });
-    g_pRemoveMonitorHook = Event::bus()->m_events.monitor.removed.listen([](PHLMONITOR monitor) { removeMonitorWidget(monitor); });
+    g_pAddMonitorHook        = Event::bus()->m_events.monitor.added.listen([](PHLMONITOR) { registerMonitors(); });
+    g_pPreRemoveMonitorHook  = Event::bus()->m_events.monitor.preRemoved.listen([](PHLMONITOR monitor) { teardownMonitorWidget(monitor); });
+    g_pRemoveMonitorHook     = Event::bus()->m_events.monitor.removed.listen([](PHLMONITOR monitor) { removeMonitorWidget(monitor); });
 
     return {"Hyprspace", "Workspace overview", "KZdkm", "0.2"};
 }
@@ -653,6 +672,7 @@ APICALL EXPORT void PLUGIN_EXIT() {
     g_pKeyPressHook.reset();
     g_pSwitchWorkspaceHook.reset();
     g_pAddMonitorHook.reset();
+    g_pPreRemoveMonitorHook.reset();
     g_pRemoveMonitorHook.reset();
     g_pStartHook.reset();
 
