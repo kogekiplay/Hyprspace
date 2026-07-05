@@ -31,6 +31,7 @@ std::vector<std::shared_ptr<CHyprspaceWidget>> g_overviewWidgets;
 
 CHyprColor  Config::panelBaseColor              = CHyprColor(0xCC111111);
 CHyprColor  Config::panelBorderColor            = CHyprColor(0x66FF99CC);
+CHyprColor  Config::overviewBackgroundColor     = CHyprColor(0x33000000);
 CHyprColor  Config::workspaceActiveBackground   = CHyprColor(0x66111111);
 CHyprColor  Config::workspaceInactiveBackground = CHyprColor(0xAA111111);
 CHyprColor  Config::workspaceActiveBorder       = CHyprColor(1, 1, 1, 0.3);
@@ -110,7 +111,7 @@ using Config::Values::CIntValue;
 using Config::Values::CStringValue;
 
 struct SPluginConfigValues {
-    SP<CColorValue> panelColor, panelBorderColor, workspaceActiveBackground, workspaceInactiveBackground, workspaceActiveBorder, workspaceInactiveBorder;
+    SP<CColorValue> panelColor, panelBorderColor, overviewBackgroundColor, workspaceActiveBackground, workspaceInactiveBackground, workspaceActiveBorder, workspaceInactiveBorder;
     SP<CIntValue>   panelHeight, panelBorderWidth, workspaceMargin, reservedArea, workspaceBorderSize, workspacePreviewCropTop, gapsIn, gapsOut;
     SP<CBoolValue>  adaptiveHeight, centerAligned, onBottom, hideBackgroundLayers, hideTopLayers, hideOverlayLayers, drawActiveWorkspace, hideRealLayers, affectStrut, overrideGaps;
     SP<CBoolValue>  autoDrag, autoScroll, exitOnClick, switchOnDrop, exitOnSwitch, showNewWorkspace, showEmptyWorkspace, showSpecialWorkspace;
@@ -196,6 +197,7 @@ void removeMonitorWidget(PHLMONITOR monitor) {
 void registerConfigValues() {
     g_pluginConfigValues.panelColor                  = registerPluginValue(SP<CColorValue>(new CColorValue("plugin:hyprspace:panel_color", "Overview panel fill color", Config::panelBaseColor.getAsHex())));
     g_pluginConfigValues.panelBorderColor            = registerPluginValue(SP<CColorValue>(new CColorValue("plugin:hyprspace:panel_border_color", "Overview panel border color", Config::panelBorderColor.getAsHex())));
+    g_pluginConfigValues.overviewBackgroundColor     = registerPluginValue(SP<CColorValue>(new CColorValue("plugin:hyprspace:overview_background_color", "Fullscreen overview blur tint color", Config::overviewBackgroundColor.getAsHex())));
     g_pluginConfigValues.workspaceActiveBackground   = registerPluginValue(SP<CColorValue>(new CColorValue("plugin:hyprspace:workspace_active_background", "Active workspace preview background", Config::workspaceActiveBackground.getAsHex())));
     g_pluginConfigValues.workspaceInactiveBackground = registerPluginValue(SP<CColorValue>(new CColorValue("plugin:hyprspace:workspace_inactive_background", "Inactive workspace preview background", Config::workspaceInactiveBackground.getAsHex())));
     g_pluginConfigValues.workspaceActiveBorder       = registerPluginValue(SP<CColorValue>(new CColorValue("plugin:hyprspace:workspace_active_border", "Active workspace preview border", Config::workspaceActiveBorder.getAsHex())));
@@ -552,6 +554,7 @@ void* findFunctionBySymbol(HANDLE inHandle, const std::string func, const std::s
 void reloadConfig() {
     Config::panelBaseColor              = readColorValue(g_pluginConfigValues.panelColor, Config::panelBaseColor);
     Config::panelBorderColor            = readColorValue(g_pluginConfigValues.panelBorderColor, Config::panelBorderColor);
+    Config::overviewBackgroundColor     = readColorValue(g_pluginConfigValues.overviewBackgroundColor, Config::overviewBackgroundColor);
     Config::workspaceActiveBackground   = readColorValue(g_pluginConfigValues.workspaceActiveBackground, Config::workspaceActiveBackground);
     Config::workspaceInactiveBackground = readColorValue(g_pluginConfigValues.workspaceInactiveBackground, Config::workspaceInactiveBackground);
     Config::workspaceActiveBorder       = readColorValue(g_pluginConfigValues.workspaceActiveBorder, Config::workspaceActiveBorder);

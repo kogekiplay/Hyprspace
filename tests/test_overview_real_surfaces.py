@@ -44,6 +44,17 @@ class OverviewRealSurfacesTest(unittest.TestCase):
         self.assertIn("previewOrigin", render_cpp)
         self.assertIn("Config::affectStrut && previewCropTop <= 0.", render_cpp)
 
+    def test_overview_uses_fullscreen_blurred_background_without_panel_mask(self):
+        globals_hpp = (ROOT / "src" / "Globals.hpp").read_text()
+        main_cpp = (ROOT / "src" / "main.cpp").read_text()
+        render_cpp = (ROOT / "src" / "Render.cpp").read_text()
+
+        self.assertIn("overviewBackgroundColor", globals_hpp)
+        self.assertIn("plugin:hyprspace:overview_background_color", main_cpp)
+        self.assertIn("readColorValue(g_pluginConfigValues.overviewBackgroundColor", main_cpp)
+        self.assertIn("renderRectWithBlur(monitorClip, Config::overviewBackgroundColor)", render_cpp)
+        self.assertNotIn("renderRectWithBlur(panelBox, Config::panelBaseColor)", render_cpp)
+
     def test_overview_temporarily_disables_hyprbars_blur(self):
         overview_hpp = (ROOT / "src" / "Overview.hpp").read_text()
         overview_cpp = (ROOT / "src" / "Overview.cpp").read_text()

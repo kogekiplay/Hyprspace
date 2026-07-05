@@ -263,18 +263,9 @@ void CHyprspaceWidget::draw() {
     g_pHyprRenderer->m_renderData.clipBox = monitorClip;
 
     if (!Config::disableBlur)
-        renderRectWithBlur(panelBox, Config::panelBaseColor);
+        renderRectWithBlur(monitorClip, Config::overviewBackgroundColor);
     else
-        renderRect(panelBox, Config::panelBaseColor);
-
-    if (Config::panelBorderWidth > 0) {
-        CBox borderBox = {panelBox.x,
-                          owner->m_position.y + (Config::onBottom * owner->m_transformedSize.y) + (Config::panelHeight + Config::reservedArea - curYOffset->value() * owner->m_scale) * panelDirection,
-                          owner->m_transformedSize.x,
-                          static_cast<double>(Config::panelBorderWidth)};
-        borderBox.y -= owner->m_position.y;
-        renderRect(borderBox, Config::panelBorderColor);
-    }
+        renderRect(monitorClip, Config::overviewBackgroundColor);
 
     g_pHyprRenderer->damageMonitor(owner);
 

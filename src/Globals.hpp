@@ -121,6 +121,7 @@ extern void* pRenderLayer;
 namespace Config {
     extern CHyprColor panelBaseColor;
     extern CHyprColor panelBorderColor;
+    extern CHyprColor overviewBackgroundColor;
     extern CHyprColor workspaceActiveBackground;
     extern CHyprColor workspaceInactiveBackground;
     extern CHyprColor workspaceActiveBorder;
