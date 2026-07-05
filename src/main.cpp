@@ -267,7 +267,7 @@ bool  g_layoutNeedsRefresh = true;
 float g_oAlpha             = -1;
 
 void onRender(eRenderStage renderStage) {
-    if (g_pCompositor->m_unsafeState)
+    if (compositorUnsafe())
         return;
 
     if (renderStage == eRenderStage::RENDER_PRE) {
@@ -325,7 +325,7 @@ void onWorkspaceChange(PHLWORKSPACE workspace) {
     if (!workspace)
         return;
 
-    const auto widget = getWidgetForMonitor(g_pCompositor->getMonitorFromID(workspace->m_monitor->m_id));
+    const auto widget = getWidgetForMonitor(monitorFromID(workspace->m_monitor->m_id));
     if (widget && widget->isActive())
         widget->show();
 }
@@ -335,7 +335,7 @@ void onMouseButton(const IPointer::SButtonEvent& event, SCallbackInfo& info) {
     if (!pointer || event.button != BTN_LEFT)
         return;
 
-    const auto monitor = g_pCompositor->getMonitorFromCursor();
+    const auto monitor = monitorFromCursor();
     if (!monitor)
         return;
 
@@ -345,7 +345,7 @@ void onMouseButton(const IPointer::SButtonEvent& event, SCallbackInfo& info) {
 }
 
 void onMouseAxis(const IPointer::SAxisEvent& event, SCallbackInfo& info) {
-    const auto monitor = g_pCompositor->getMonitorFromCursor();
+    const auto monitor = monitorFromCursor();
     if (!monitor)
         return;
 
@@ -358,7 +358,7 @@ void onSwipeBegin(const IPointer::SSwipeBeginEvent& event, SCallbackInfo& info) 
     if (Config::disableGestures)
         return;
 
-    const auto widget = getWidgetForMonitor(g_pCompositor->getMonitorFromCursor());
+    const auto widget = getWidgetForMonitor(monitorFromCursor());
     if (widget)
         widget->beginSwipe(event);
 
@@ -375,7 +375,7 @@ void onSwipeUpdate(const IPointer::SSwipeUpdateEvent& event, SCallbackInfo& info
     if (Config::disableGestures)
         return;
 
-    const auto widget = getWidgetForMonitor(g_pCompositor->getMonitorFromCursor());
+    const auto widget = getWidgetForMonitor(monitorFromCursor());
     if (widget)
         info.cancelled = !widget->updateSwipe(event);
 }
@@ -384,7 +384,7 @@ void onSwipeEnd(const IPointer::SSwipeEndEvent& event, SCallbackInfo& info) {
     if (Config::disableGestures)
         return;
 
-    const auto widget = getWidgetForMonitor(g_pCompositor->getMonitorFromCursor());
+    const auto widget = getWidgetForMonitor(monitorFromCursor());
     if (widget)
         widget->endSwipe(event);
 }
@@ -419,8 +419,8 @@ void onTouchDown(const ITouch::SDownEvent& event, SCallbackInfo& info) {
     if (!event.device)
         return;
 
-    auto targetMonitor = g_pCompositor->getMonitorFromName(!event.device->m_boundOutput.empty() ? event.device->m_boundOutput : "");
-    targetMonitor      = targetMonitor ? targetMonitor : g_pCompositor->getMonitorFromCursor();
+    auto targetMonitor = monitorFromName(!event.device->m_boundOutput.empty() ? event.device->m_boundOutput : "");
+    targetMonitor      = targetMonitor ? targetMonitor : monitorFromCursor();
 
     const auto widget = getWidgetForMonitor(targetMonitor);
     if (widget && targetMonitor && widget->isActive()) {
@@ -428,7 +428,7 @@ void onTouchDown(const ITouch::SDownEvent& event, SCallbackInfo& info) {
         info.cancelled     = !widget->buttonEvent(true, pos);
         if (info.cancelled) {
             g_pTouchedMonitor = targetMonitor;
-            g_pCompositor->warpCursorTo(pos);
+            warpCursorTo(pos);
             g_pInputManager->refocus();
         }
     }
@@ -438,7 +438,7 @@ void onTouchMove(const ITouch::SMotionEvent& event, SCallbackInfo& info) {
     if (!g_pTouchedMonitor)
         return;
 
-    g_pCompositor->warpCursorTo(g_pTouchedMonitor->m_position + g_pTouchedMonitor->m_size * event.pos);
+    warpCursorTo(g_pTouchedMonitor->m_position + g_pTouchedMonitor->m_size * event.pos);
     g_pInputManager->simulateMouseMovement();
 }
 
@@ -451,7 +451,7 @@ void onTouchUp(const ITouch::SUpEvent& event, SCallbackInfo& info) {
 }
 
 static SDispatchResult dispatchToggleOverview(std::string arg) {
-    const auto currentMonitor = g_pCompositor->getMonitorFromCursor();
+    const auto currentMonitor = monitorFromCursor();
     const auto widget         = getWidgetForMonitor(currentMonitor);
     if (!widget)
         return {};
@@ -480,7 +480,7 @@ static SDispatchResult dispatchOpenOverview(std::string arg) {
                 widget->show();
         }
     } else {
-        const auto widget = getWidgetForMonitor(g_pCompositor->getMonitorFromCursor());
+        const auto widget = getWidgetForMonitor(monitorFromCursor());
         if (widget && !widget->isActive())
             widget->show();
     }
@@ -495,7 +495,7 @@ static SDispatchResult dispatchCloseOverview(std::string arg) {
                 widget->hide();
         }
     } else {
-        const auto widget = getWidgetForMonitor(g_pCompositor->getMonitorFromCursor());
+        const auto widget = getWidgetForMonitor(monitorFromCursor());
         if (widget && widget->isActive())
             widget->hide();
     }
@@ -599,7 +599,7 @@ void reloadConfig() {
 }
 
 void registerMonitors() {
-    for (auto& monitor : g_pCompositor->m_monitors) {
+    for (auto& monitor : monitors()) {
         if (getWidgetForMonitor(monitor))
             continue;
 

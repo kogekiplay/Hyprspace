@@ -102,13 +102,12 @@ void renderLayerStub(PHLLS layer, PHLMONITOR monitor, CBox rectOverride, const T
     if (!layer || !monitor)
         return;
 
-    if (!layer->m_mapped || layer->m_readyToDelete || !layer->m_layerSurface || !layer->wlSurface() || !layer->wlSurface()->resource())
+    if (!layer->m_mapped || !layer->m_layerSurface || !layer->wlSurface() || !layer->wlSurface()->resource())
         return;
 
     const Vector2D realPosition = layer->m_realPosition->value();
     const Vector2D realSize     = layer->m_realSize->value();
-    const float    alpha        = layer->m_alpha->value();
-    const bool     fadingOut    = layer->m_fadingOut;
+    const float    alpha        = layerAlpha(layer)->value();
 
     const float scale = rectOverride.w / realSize.x;
     if (!(scale > 0.F) || !(rectOverride.w > 0 && rectOverride.h > 0))
@@ -119,8 +118,7 @@ void renderLayerStub(PHLLS layer, PHLMONITOR monitor, CBox rectOverride, const T
     renderModif.modifs.push_back(std::make_pair(Render::SRenderModifData::eRenderModifType::RMOD_TYPE_SCALE, std::any(scale)));
     renderModif.enabled = true;
 
-    layer->m_alpha->setValueAndWarp(1.F);
-    layer->m_fadingOut = false;
+    layerAlpha(layer)->setValueAndWarp(1.F);
 
     g_pHyprRenderer->m_renderPass.add(makeUnique<CRendererHintsPassElement>(CRendererHintsPassElement::SData{.renderModif = renderModif}));
     Hyprutils::Utils::CScopeGuard clearHints([] {
@@ -129,8 +127,7 @@ void renderLayerStub(PHLLS layer, PHLMONITOR monitor, CBox rectOverride, const T
     if (pRenderLayer)
         (*(tRenderLayer)pRenderLayer)(g_pHyprRenderer.get(), layer, monitor, time, false, false);
 
-    layer->m_fadingOut = fadingOut;
-    layer->m_alpha->setValueAndWarp(alpha);
+    layerAlpha(layer)->setValueAndWarp(alpha);
 }
 
 bool renderWindowPreview(PHLWINDOW window, PHLWORKSPACE workspace, PHLMONITOR owner, double workspaceX, double workspaceY, double monitorScaleFactor, const Time::steady_tp& time) {
@@ -153,7 +150,7 @@ bool renderWindowPreview(PHLWINDOW window, PHLWORKSPACE workspace, PHLMONITOR ow
 void CHyprspaceWidget::draw() {
     workspaceBoxes.clear();
 
-    if (g_pCompositor->m_unsafeState)
+    if (compositorUnsafe())
         return;
 
     if (!active && !curYOffset->isBeingAnimated())
@@ -203,7 +200,7 @@ void CHyprspaceWidget::draw() {
 
     WORKSPACEID lowestID  = std::numeric_limits<WORKSPACEID>::max();
     WORKSPACEID highestID = 1;
-    for (const auto& ws : g_pCompositor->getWorkspaces()) {
+    for (const auto& ws : workspaceList()) {
         if (!ws || ws->m_id < 1 || !ws->m_monitor || ws->m_monitor->m_id != ownerID)
             continue;
 
@@ -226,13 +223,13 @@ void CHyprspaceWidget::draw() {
             if (id == owner->activeSpecialWorkspaceID())
                 continue;
 
-            if (g_pCompositor->getWorkspaceByID(id) == nullptr)
+            if (workspaceByID(id) == nullptr)
                 workspaces.push_back(id);
         }
     }
 
     if (Config::showNewWorkspace) {
-        while (g_pCompositor->getWorkspaceByID(highestID) != nullptr)
+        while (workspaceByID(highestID) != nullptr)
             highestID++;
         workspaces.push_back(highestID);
     }
@@ -259,7 +256,7 @@ void CHyprspaceWidget::draw() {
 
     std::unordered_map<WORKSPACEID, SWorkspaceWindows> windowsByWorkspace;
     windowsByWorkspace.reserve(workspaceCount + 2);
-    for (const auto& window : g_pCompositor->m_windows) {
+    for (const auto& window : windows()) {
         if (!window || !window->m_workspace)
             continue;
 
@@ -271,7 +268,7 @@ void CHyprspaceWidget::draw() {
     }
 
     for (const auto wsID : workspaces) {
-        const auto ws  = g_pCompositor->getWorkspaceByID(wsID);
+        const auto ws  = workspaceByID(wsID);
         CBox       box = {workspaceOffsetX, workspaceOffsetY, workspaceBoxW, workspaceBoxH};
 
         if (ws == owner->m_activeWorkspace) {

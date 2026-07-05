@@ -13,8 +13,16 @@
 #include <hyprland/src/render/types.hpp>
 #include <hyprland/src/managers/input/InputManager.hpp>
 #include <hyprland/src/layout/LayoutManager.hpp>
-#include <hyprland/src/managers/animation/AnimationManager.hpp>
+#include <hyprland/src/animation/AnimationManager.hpp>
 #include <hyprland/src/config/ConfigValue.hpp>
+#include <hyprland/src/desktop/state/GlobalWindowController.hpp>
+#include <hyprland/src/desktop/state/WindowState.hpp>
+#include <hyprland/src/desktop/view/LayerSurface.hpp>
+#include <hyprland/src/pointer/PointerController.hpp>
+#include <hyprland/src/state/MonitorQuery.hpp>
+#include <hyprland/src/state/MonitorState.hpp>
+#include <hyprland/src/state/WorkspaceQuery.hpp>
+#include <hyprland/src/state/WorkspaceState.hpp>
 #include <hyprland/src/helpers/time/Time.hpp>
 #include <hyprland/src/event/EventBus.hpp>
 
@@ -39,6 +47,72 @@ CHyprSignalListener listenCancellable(Signal& signal, std::function<void(const E
 }
 
 inline HANDLE pHandle = NULL;
+
+inline bool compositorUnsafe() {
+    return !g_pCompositor || g_pCompositor->m_isShuttingDown;
+}
+
+inline PHLMONITOR monitorFromID(MONITORID id) {
+    return State::CMonitorQuery(*State::monitorState()).id(id).run();
+}
+
+inline PHLMONITOR monitorFromCursor() {
+    return State::CMonitorQuery(*State::monitorState()).vec(g_pInputManager->getMouseCoordsInternal()).run();
+}
+
+inline PHLMONITOR monitorFromName(const std::string& name) {
+    if (name.empty())
+        return nullptr;
+
+    return State::CMonitorQuery(*State::monitorState()).name(name).run();
+}
+
+inline PHLWORKSPACE workspaceByID(WORKSPACEID id) {
+    return State::CWorkspaceQuery(*State::workspaceState()).id(id).run();
+}
+
+inline PHLWORKSPACE createWorkspace(WORKSPACEID id, MONITORID monitorID) {
+    return State::workspaceState()->create(id, monitorID);
+}
+
+inline const std::vector<PHLWINDOW>& windows() {
+    return Desktop::windowState()->windows();
+}
+
+inline std::vector<PHLWORKSPACE> workspaceList() {
+    return State::workspaceState()->workspacesCopy();
+}
+
+inline const std::vector<PHLMONITOR>& monitors() {
+    return State::monitorState()->monitors();
+}
+
+inline void scheduleFrameForMonitor(PHLMONITOR monitor) {
+    if (monitor)
+        monitor->scheduleFrame();
+}
+
+inline void warpCursorTo(const Vector2D& pos) {
+    Pointer::pointerController()->warpTo(pos, true);
+}
+
+inline PHLWINDOW windowAt(Vector2D coords) {
+    const auto& allWindows = windows();
+    for (auto it = allWindows.rbegin(); it != allWindows.rend(); ++it) {
+        const auto& window = *it;
+        if (!window || !window->m_isMapped)
+            continue;
+
+        if (window->getWindowBoxUnified(Desktop::View::WINDOW_ONLY).containsPoint(coords))
+            return window;
+    }
+
+    return nullptr;
+}
+
+inline PHLANIMVAR<float>& layerAlpha(PHLLS layer) {
+    return layer->alpha()[Desktop::View::LS_ALPHA_FADE];
+}
 
 typedef void (*tRenderWindow)(void*, PHLWINDOW, PHLMONITOR, const Time::steady_tp&, bool, Render::eRenderPassMode, bool, bool);
 typedef void (*tRenderLayer)(void*, PHLLS, PHLMONITOR, const Time::steady_tp&, bool, bool);

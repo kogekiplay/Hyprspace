@@ -50,16 +50,16 @@ bool CHyprspaceWidget::buttonEvent(bool pressed, Vector2D coords) {
         break;
     }
 
-    auto targetWorkspace = g_pCompositor->getWorkspaceByID(targetWorkspaceID);
+    auto targetWorkspace = workspaceByID(targetWorkspaceID);
     if (!targetWorkspace && targetWorkspaceID >= SPECIAL_WORKSPACE_START)
-        targetWorkspace = g_pCompositor->createNewWorkspace(targetWorkspaceID, owner->m_id);
+        targetWorkspace = createWorkspace(targetWorkspaceID, owner->m_id);
 
     if (Config::autoDrag && (targetWorkspace == nullptr || !pressed)) {
         if (g_layoutManager->dragController()->target())
             g_layoutManager->endDragTarget();
 
         if (pressed) {
-            const auto window = g_pCompositor->vectorToWindowUnified(coords, Desktop::View::WINDOW_ONLY, nullptr);
+            const auto window = windowAt(coords);
             if (window) {
                 const auto target = window->layoutTarget();
                 if (target)
@@ -69,15 +69,15 @@ bool CHyprspaceWidget::buttonEvent(bool pressed, Vector2D coords) {
     }
 
     if (targetWindow && targetWorkspace != nullptr && !pressed) {
-        g_pCompositor->moveWindowToWorkspaceSafe(targetWindow, targetWorkspace);
+        Desktop::globalWindowController()->moveWindowToWorkspace(targetWindow, targetWorkspace);
         if (targetWindow->m_isFloating) {
             const auto targetPos = owner->m_position + (owner->m_size / 2.) - (targetWindow->m_reportedSize / 2.);
-            targetWindow->m_position = targetPos;
-            *targetWindow->m_realPosition = targetPos;
+            targetWindow->move(targetPos);
+            targetWindow->m_realPosition->setValueAndWarp(targetPos);
         }
 
         if (Config::switchOnDrop) {
-            g_pCompositor->getMonitorFromID(targetWorkspace->m_monitor->m_id)->changeWorkspace(targetWorkspace->m_id);
+            monitorFromID(targetWorkspace->m_monitor->m_id)->changeWorkspace(targetWorkspace->m_id);
             if (Config::exitOnSwitch && active)
                 hide();
         }
@@ -87,7 +87,7 @@ bool CHyprspaceWidget::buttonEvent(bool pressed, Vector2D coords) {
         if (targetWorkspace->m_isSpecialWorkspace) {
             owner->activeSpecialWorkspaceID() == targetWorkspaceID ? owner->setSpecialWorkspace(nullptr) : owner->setSpecialWorkspace(targetWorkspaceID);
         } else {
-            g_pCompositor->getMonitorFromID(targetWorkspace->m_monitor->m_id)->changeWorkspace(targetWorkspace->m_id);
+            monitorFromID(targetWorkspace->m_monitor->m_id)->changeWorkspace(targetWorkspace->m_id);
         }
 
         if (Config::exitOnSwitch && active)
@@ -116,8 +116,8 @@ bool CHyprspaceWidget::axisEvent(double delta, wl_pointer_axis axis, Vector2D co
     } else if (Config::autoScroll && axis == WL_POINTER_AXIS_VERTICAL_SCROLL) {
         const auto relative = delta < 0 ? "r-1" : "r+1";
         const auto wsIDName = getWorkspaceIDNameFromString(relative);
-        if (!g_pCompositor->getWorkspaceByID(wsIDName.id))
-            (void)g_pCompositor->createNewWorkspace(wsIDName.id, ownerID);
+        if (!workspaceByID(wsIDName.id))
+            (void)createWorkspace(wsIDName.id, ownerID);
 
         owner->changeWorkspace(wsIDName.id);
     }

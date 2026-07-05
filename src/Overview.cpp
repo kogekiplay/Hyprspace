@@ -27,7 +27,7 @@ void requestFullMonitorRedraw(PHLMONITOR owner) {
         return;
 
     owner->m_damage.damageEntire();
-    g_pCompositor->scheduleFrameForMonitor(owner);
+    scheduleFrameForMonitor(owner);
 }
 
 } // namespace
@@ -44,11 +44,10 @@ CHyprspaceWidget::~CHyprspaceWidget() {
 
 void CHyprspaceWidget::restoreHiddenLayers() {
     for (const auto& [layer, alpha] : oLayerAlpha) {
-        if (!layer || layer->m_readyToDelete || !layer->m_mapped)
+        if (!layer || !layer->m_mapped)
             continue;
 
-        layer->m_fadingOut = false;
-        *layer->m_alpha    = alpha;
+        *layerAlpha(layer) = alpha;
     }
 
     oLayerAlpha.clear();
@@ -76,8 +75,8 @@ void CHyprspaceWidget::resetAnimationState(PHLMONITOR owner) {
     if (Config::overrideAnimSpeed > 0)
         curAnimation.internalSpeed = Config::overrideAnimSpeed;
 
-    g_pAnimationManager->createAnimation(0.F, curYOffset, curAnimationConfig.pValues.lock(), AVARDAMAGE_ENTIRE);
-    g_pAnimationManager->createAnimation(0.F, workspaceScrollOffset, curAnimationConfig.pValues.lock(), AVARDAMAGE_ENTIRE);
+    Animation::mgr()->createAnimation(0.F, curYOffset, curAnimationConfig.pValues.lock(), AVARDAMAGE_ENTIRE);
+    Animation::mgr()->createAnimation(0.F, workspaceScrollOffset, curAnimationConfig.pValues.lock(), AVARDAMAGE_ENTIRE);
 
     const auto hiddenOffset = panelTravelForMonitor(owner);
     curYOffset->setValueAndWarp(active ? 0.F : hiddenOffset);
@@ -104,16 +103,16 @@ void CHyprspaceWidget::cleanup(PHLMONITOR owner) {
 }
 
 PHLMONITOR CHyprspaceWidget::getOwner() {
-    return g_pCompositor->getMonitorFromID(ownerID);
+    return monitorFromID(ownerID);
 }
 
 void CHyprspaceWidget::show() {
     auto owner = getOwner();
-    if (!owner || !owner->m_enabled || g_pCompositor->m_unsafeState)
+    if (!owner || !owner->m_enabled || compositorUnsafe())
         return;
 
     if (prevFullscreen.empty()) {
-        for (auto& ws : g_pCompositor->getWorkspaces()) {
+        for (auto& ws : workspaceList()) {
             if (!ws || !ws->m_monitor || ws->m_monitor->m_id != ownerID)
                 continue;
 
@@ -136,9 +135,8 @@ void CHyprspaceWidget::show() {
                 if (!layer)
                     continue;
 
-                oLayerAlpha.emplace_back(layer, layer->m_alpha->goal());
-                *layer->m_alpha = 0.F;
-                layer->m_fadingOut = true;
+                oLayerAlpha.emplace_back(layer, layerAlpha(layer)->goal());
+                *layerAlpha(layer) = 0.F;
             }
         }
     }
