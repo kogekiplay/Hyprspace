@@ -15,6 +15,22 @@ class OverviewRealSurfacesTest(unittest.TestCase):
         self.assertIn("noBlur().set(true", overview_cpp)
         self.assertIn("noBlur().unset", overview_cpp)
 
+    def test_window_preview_renders_real_surfaces_directly(self):
+        render_cpp = (ROOT / "src" / "Render.cpp").read_text()
+
+        self.assertIn("#include <hyprland/src/render/pass/SurfacePassElement.hpp>", render_cpp)
+        self.assertIn("CSurfacePassElement::SRenderData renderData", render_cpp)
+        self.assertIn("renderData.clipBox            = clipBox", render_cpp)
+        self.assertIn("makeUnique<CSurfacePassElement>(renderData)", render_cpp)
+        self.assertNotIn("(*(tRenderWindow)pRenderWindow)(g_pHyprRenderer.get(), window, monitor", render_cpp)
+
+    def test_window_preview_refreshes_hidden_surface_buffers(self):
+        render_cpp = (ROOT / "src" / "Render.cpp").read_text()
+
+        self.assertIn("refreshWindowPreviewSurfaces", render_cpp)
+        self.assertIn("unlockFirst(LOCK_REASON_FENCE | LOCK_REASON_FIFO | LOCK_REASON_TIMER)", render_cpp)
+        self.assertIn("presentFeedback(time, monitor, true)", render_cpp)
+
     def test_overview_temporarily_disables_hyprbars_blur(self):
         overview_hpp = (ROOT / "src" / "Overview.hpp").read_text()
         overview_cpp = (ROOT / "src" / "Overview.cpp").read_text()
