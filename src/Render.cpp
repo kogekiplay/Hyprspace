@@ -231,11 +231,17 @@ void redrawActiveWorkspaceWindow(PHLWINDOW window, PHLWORKSPACE workspace, PHLMO
     if (!window || !workspace || !owner)
         return;
 
-    const Vector2D realPosition = window->m_realPosition->value() + window->m_floatingOffset;
-    const Vector2D realSize     = window->m_realSize->value();
-    CBox           redrawBox    = {(realPosition - owner->m_position) * owner->m_scale, realSize * owner->m_scale};
+    if (!pRenderWindow)
+        return;
 
-    renderWindowStub(window, owner, workspace, redrawBox, clipBox, time);
+    const auto clipBefore = g_pHyprRenderer->m_renderData.clipBox;
+    g_pHyprRenderer->m_renderData.clipBox = clipBox;
+
+    Hyprutils::Utils::CScopeGuard restoreRenderState([&] {
+        g_pHyprRenderer->m_renderData.clipBox = clipBefore;
+    });
+
+    (*(tRenderWindow)pRenderWindow)(g_pHyprRenderer.get(), window, owner, time, true, Render::RENDER_PASS_MAIN, false, false);
 }
 
 void redrawActiveWorkspaceWindows(PHLMONITOR owner, CBox clipBox, const Time::steady_tp& time) {
