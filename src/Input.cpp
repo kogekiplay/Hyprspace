@@ -33,7 +33,7 @@ PHLWINDOW activeWorkspaceDecorationAt(PHLMONITOR owner, Vector2D coords) {
         if (!window || !window->m_isMapped || window->m_workspace != owner->m_activeWorkspace)
             continue;
 
-        const auto inputBox  = window->getWindowBoxUnified(Desktop::View::INPUT_EXTENTS);
+        const auto inputBox  = window->getWindowBoxUnified(Desktop::View::RESERVED_EXTENTS | Desktop::View::INPUT_EXTENTS);
         const auto windowBox = window->getWindowBoxUnified(Desktop::View::WINDOW_ONLY);
         if (inputBox.containsPoint(coords) && !windowBox.containsPoint(coords))
             return window;

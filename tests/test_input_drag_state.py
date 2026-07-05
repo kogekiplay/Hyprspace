@@ -21,6 +21,7 @@ class InputDragStateTest(unittest.TestCase):
 
         self.assertIn("passingThroughActiveWindowDecoration", overview_hpp)
         self.assertIn("activeWorkspaceDecorationAt", input_cpp)
+        self.assertIn("Desktop::View::RESERVED_EXTENTS", input_cpp)
         self.assertIn("Desktop::View::INPUT_EXTENTS", input_cpp)
         self.assertIn("Desktop::View::WINDOW_ONLY", input_cpp)
         self.assertIn("return true;", input_cpp)
