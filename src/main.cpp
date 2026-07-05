@@ -50,6 +50,9 @@ bool        Config::hideOverlayLayers       = false;
 bool        Config::drawActiveWorkspace     = true;
 bool        Config::hideRealLayers          = false;
 bool        Config::affectStrut             = false;
+bool        Config::overrideGaps            = true;
+int         Config::gapsIn                  = 20;
+int         Config::gapsOut                 = 60;
 bool        Config::autoDrag                = true;
 bool        Config::autoScroll              = true;
 bool        Config::exitOnClick             = true;
@@ -106,8 +109,8 @@ using Config::Values::CStringValue;
 
 struct SPluginConfigValues {
     SP<CColorValue> panelColor, panelBorderColor, workspaceActiveBackground, workspaceInactiveBackground, workspaceActiveBorder, workspaceInactiveBorder;
-    SP<CIntValue>   panelHeight, panelBorderWidth, workspaceMargin, reservedArea, workspaceBorderSize;
-    SP<CBoolValue>  adaptiveHeight, centerAligned, onBottom, hideBackgroundLayers, hideTopLayers, hideOverlayLayers, drawActiveWorkspace, hideRealLayers, affectStrut;
+    SP<CIntValue>   panelHeight, panelBorderWidth, workspaceMargin, reservedArea, workspaceBorderSize, gapsIn, gapsOut;
+    SP<CBoolValue>  adaptiveHeight, centerAligned, onBottom, hideBackgroundLayers, hideTopLayers, hideOverlayLayers, drawActiveWorkspace, hideRealLayers, affectStrut, overrideGaps;
     SP<CBoolValue>  autoDrag, autoScroll, exitOnClick, switchOnDrop, exitOnSwitch, showNewWorkspace, showEmptyWorkspace, showSpecialWorkspace;
     SP<CIntValue>   swipeFingers, swipeDistance, swipeForceSpeed, clickReleaseThresholdMs;
     SP<CBoolValue>  disableGestures, reverseSwipe, disableBlur;
@@ -211,6 +214,9 @@ void registerConfigValues() {
     g_pluginConfigValues.drawActiveWorkspace  = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:draw_active_workspace", "Draw the active workspace contents in the overview", Config::drawActiveWorkspace)));
     g_pluginConfigValues.hideRealLayers       = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:hide_real_layers", "Temporarily hide real top and overlay layers while overview is active", Config::hideRealLayers)));
     g_pluginConfigValues.affectStrut          = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:affect_strut", "Reserve monitor space while the overview is visible", Config::affectStrut)));
+    g_pluginConfigValues.overrideGaps         = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:override_gaps", "Temporarily override active workspace gaps while overview is visible", Config::overrideGaps)));
+    g_pluginConfigValues.gapsIn               = registerPluginValue(SP<CIntValue>(new CIntValue("plugin:hyprspace:gaps_in", "Inner gap used while overview is visible", Config::gapsIn, {.min = 0})));
+    g_pluginConfigValues.gapsOut              = registerPluginValue(SP<CIntValue>(new CIntValue("plugin:hyprspace:gaps_out", "Outer gap used while overview is visible", Config::gapsOut, {.min = 0})));
 
     g_pluginConfigValues.autoDrag           = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:auto_drag", "Start dragging a hovered window on press", Config::autoDrag)));
     g_pluginConfigValues.autoScroll         = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:auto_scroll", "Allow wheel scrolling outside the panel to switch workspaces", Config::autoScroll)));
@@ -559,6 +565,9 @@ void reloadConfig() {
     Config::drawActiveWorkspace  = readBoolValue(g_pluginConfigValues.drawActiveWorkspace, Config::drawActiveWorkspace);
     Config::hideRealLayers       = readBoolValue(g_pluginConfigValues.hideRealLayers, Config::hideRealLayers);
     Config::affectStrut          = readBoolValue(g_pluginConfigValues.affectStrut, Config::affectStrut);
+    Config::overrideGaps         = readBoolValue(g_pluginConfigValues.overrideGaps, Config::overrideGaps);
+    Config::gapsIn               = readIntValue(g_pluginConfigValues.gapsIn, Config::gapsIn);
+    Config::gapsOut              = readIntValue(g_pluginConfigValues.gapsOut, Config::gapsOut);
 
     Config::autoDrag             = readBoolValue(g_pluginConfigValues.autoDrag, Config::autoDrag);
     Config::autoScroll           = readBoolValue(g_pluginConfigValues.autoScroll, Config::autoScroll);

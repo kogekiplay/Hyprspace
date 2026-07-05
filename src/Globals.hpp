@@ -140,6 +140,9 @@ namespace Config {
     extern bool drawActiveWorkspace;
     extern bool hideRealLayers;
     extern bool affectStrut;
+    extern bool overrideGaps;
+    extern int gapsIn;
+    extern int gapsOut;
 
     extern bool autoDrag;
     extern bool autoScroll;
