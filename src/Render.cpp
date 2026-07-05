@@ -212,12 +212,12 @@ void renderLayerStub(PHLLS layer, PHLMONITOR monitor, CBox rectOverride, CBox cl
     layerAlpha(layer)->setValueAndWarp(alpha);
 }
 
-bool renderWindowPreview(PHLWINDOW window, PHLWORKSPACE workspace, PHLMONITOR owner, CBox workspaceBox, double monitorScaleFactor, const Time::steady_tp& time) {
+bool renderWindowPreview(PHLWINDOW window, PHLWORKSPACE workspace, PHLMONITOR owner, CBox workspaceBox, double monitorScaleFactor, double previewCropTop, const Time::steady_tp& time) {
     if (!window || !workspace || !owner)
         return false;
 
     const double wX = workspaceBox.x + ((window->m_realPosition->value().x - owner->m_position.x) * monitorScaleFactor * owner->m_scale);
-    const double wY = workspaceBox.y + ((window->m_realPosition->value().y - owner->m_position.y) * monitorScaleFactor * owner->m_scale);
+    const double wY = workspaceBox.y + ((window->m_realPosition->value().y - owner->m_position.y - previewCropTop) * monitorScaleFactor * owner->m_scale);
     const double wW = window->m_realSize->value().x * monitorScaleFactor * owner->m_scale;
     const double wH = window->m_realSize->value().y * monitorScaleFactor * owner->m_scale;
     if (!(wW > 0 && wH > 0))
@@ -326,9 +326,12 @@ void CHyprspaceWidget::draw() {
     if (workspaceCount == 0)
         return;
 
-    const double monitorScaleFactor = ((Config::panelHeight - 2 * Config::workspaceMargin) / owner->m_transformedSize.y) * owner->m_scale;
+    const double previewCropTop     = std::clamp<double>(Config::workspacePreviewCropTop, 0., std::max(owner->m_transformedSize.y - 1., 0.));
+    const double previewHeight      = std::max(owner->m_transformedSize.y - previewCropTop, 1.);
+    const double previewPanelHeight = std::max<double>(Config::panelHeight - 2 * Config::workspaceMargin, 1.);
+    const double monitorScaleFactor = (previewPanelHeight / previewHeight) * owner->m_scale;
     const double workspaceBoxW      = owner->m_transformedSize.x * monitorScaleFactor;
-    const double workspaceBoxH      = owner->m_transformedSize.y * monitorScaleFactor;
+    const double workspaceBoxH      = previewHeight * monitorScaleFactor;
     const double workspaceGroupW    = workspaceBoxW * workspaceCount + (Config::workspaceMargin * owner->m_scale) * (workspaceCount - 1);
     double       workspaceOffsetX   = Config::centerAligned ? workspaceScrollOffset->value() + (panelBox.w / 2.) - (workspaceGroupW / 2.) : workspaceScrollOffset->value() + Config::workspaceMargin;
     const double workspaceOffsetY   = !Config::onBottom ? (((Config::reservedArea + Config::workspaceMargin) * owner->m_scale) - curYOffset->value()) : (owner->m_transformedSize.y - ((Config::reservedArea + Config::workspaceMargin) * owner->m_scale) - workspaceBoxH + curYOffset->value());
@@ -338,6 +341,8 @@ void CHyprspaceWidget::draw() {
 
     if (!(workspaceBoxW > 0 && workspaceBoxH > 0))
         return;
+
+    const Vector2D previewOrigin = owner->m_position + Vector2D{0.0, previewCropTop};
 
     std::unordered_map<WORKSPACEID, SWorkspaceWindows> windowsByWorkspace;
     windowsByWorkspace.reserve(workspaceCount + 2);
@@ -385,7 +390,7 @@ void CHyprspaceWidget::draw() {
                 if (!layer)
                     continue;
 
-                CBox layerBox = {box.pos() + (layer->m_realPosition->value() - owner->m_position) * monitorScaleFactor, layer->m_realSize->value() * monitorScaleFactor};
+                CBox layerBox = {box.pos() + (layer->m_realPosition->value() - previewOrigin) * monitorScaleFactor, layer->m_realSize->value() * monitorScaleFactor};
                 renderLayerStub(layer, owner, layerBox, box, time);
             }
 
@@ -394,12 +399,12 @@ void CHyprspaceWidget::draw() {
                 if (!layer)
                     continue;
 
-                CBox layerBox = {box.pos() + (layer->m_realPosition->value() - owner->m_position) * monitorScaleFactor, layer->m_realSize->value() * monitorScaleFactor};
+                CBox layerBox = {box.pos() + (layer->m_realPosition->value() - previewOrigin) * monitorScaleFactor, layer->m_realSize->value() * monitorScaleFactor};
                 renderLayerStub(layer, owner, layerBox, box, time);
             }
         }
 
-        if (owner->m_activeWorkspace == ws && Config::affectStrut) {
+        if (owner->m_activeWorkspace == ws && Config::affectStrut && previewCropTop <= 0.) {
             CBox miniPanelBox = {workspaceOffsetX, workspaceOffsetY, panelBox.w * monitorScaleFactor, panelBox.h * monitorScaleFactor};
             if (Config::onBottom)
                 miniPanelBox = {workspaceOffsetX, workspaceOffsetY + workspaceBoxH - panelBox.h * monitorScaleFactor, panelBox.w * monitorScaleFactor, panelBox.h * monitorScaleFactor};
@@ -414,18 +419,18 @@ void CHyprspaceWidget::draw() {
             const auto windowsIt = windowsByWorkspace.find(ws->m_id);
                 if (windowsIt != windowsByWorkspace.end()) {
                     for (const auto& window : windowsIt->second.tiled)
-                        renderWindowPreview(window, ws, owner, box, monitorScaleFactor, time);
+                        renderWindowPreview(window, ws, owner, box, monitorScaleFactor, previewCropTop, time);
 
                 const auto focused = ws->getLastFocusedWindow();
                 for (const auto& window : windowsIt->second.floating) {
                     if (window == focused)
                         continue;
 
-                    renderWindowPreview(window, ws, owner, box, monitorScaleFactor, time);
+                    renderWindowPreview(window, ws, owner, box, monitorScaleFactor, previewCropTop, time);
                 }
 
                 if (focused && focused->m_isFloating)
-                    renderWindowPreview(focused, ws, owner, box, monitorScaleFactor, time);
+                    renderWindowPreview(focused, ws, owner, box, monitorScaleFactor, previewCropTop, time);
             }
         }
 
@@ -436,7 +441,7 @@ void CHyprspaceWidget::draw() {
                     if (!layer)
                         continue;
 
-                    CBox layerBox = {box.pos() + (layer->m_realPosition->value() - owner->m_position) * monitorScaleFactor, layer->m_realSize->value() * monitorScaleFactor};
+                    CBox layerBox = {box.pos() + (layer->m_realPosition->value() - previewOrigin) * monitorScaleFactor, layer->m_realSize->value() * monitorScaleFactor};
                     renderLayerStub(layer, owner, layerBox, box, time);
                 }
             }
@@ -447,7 +452,7 @@ void CHyprspaceWidget::draw() {
                     if (!layer)
                         continue;
 
-                    CBox layerBox = {box.pos() + (layer->m_realPosition->value() - owner->m_position) * monitorScaleFactor, layer->m_realSize->value() * monitorScaleFactor};
+                    CBox layerBox = {box.pos() + (layer->m_realPosition->value() - previewOrigin) * monitorScaleFactor, layer->m_realSize->value() * monitorScaleFactor};
                     renderLayerStub(layer, owner, layerBox, box, time);
                 }
             }

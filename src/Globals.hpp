@@ -131,6 +131,7 @@ namespace Config {
     extern int workspaceMargin;
     extern int reservedArea;
     extern int workspaceBorderSize;
+    extern int workspacePreviewCropTop;
     extern bool adaptiveHeight;
     extern bool centerAligned;
     extern bool onBottom;

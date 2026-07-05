@@ -31,6 +31,19 @@ class OverviewRealSurfacesTest(unittest.TestCase):
         self.assertIn("unlockFirst(LOCK_REASON_FENCE | LOCK_REASON_FIFO | LOCK_REASON_TIMER)", render_cpp)
         self.assertIn("presentFeedback(time, monitor, true)", render_cpp)
 
+    def test_workspace_preview_can_crop_top_empty_area(self):
+        globals_hpp = (ROOT / "src" / "Globals.hpp").read_text()
+        main_cpp = (ROOT / "src" / "main.cpp").read_text()
+        render_cpp = (ROOT / "src" / "Render.cpp").read_text()
+
+        self.assertIn("workspacePreviewCropTop", globals_hpp)
+        self.assertIn("plugin:hyprspace:workspace_preview_crop_top", main_cpp)
+        self.assertIn("readIntValue(g_pluginConfigValues.workspacePreviewCropTop", main_cpp)
+        self.assertIn("previewCropTop", render_cpp)
+        self.assertIn("owner->m_position.y - previewCropTop", render_cpp)
+        self.assertIn("previewOrigin", render_cpp)
+        self.assertIn("Config::affectStrut && previewCropTop <= 0.", render_cpp)
+
     def test_overview_temporarily_disables_hyprbars_blur(self):
         overview_hpp = (ROOT / "src" / "Overview.hpp").read_text()
         overview_cpp = (ROOT / "src" / "Overview.cpp").read_text()

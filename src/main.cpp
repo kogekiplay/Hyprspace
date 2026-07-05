@@ -41,6 +41,7 @@ int         Config::panelBorderWidth        = 2;
 int         Config::workspaceMargin         = 12;
 int         Config::reservedArea            = 0;
 int         Config::workspaceBorderSize     = 1;
+int         Config::workspacePreviewCropTop = 0;
 bool        Config::adaptiveHeight          = false;
 bool        Config::centerAligned           = true;
 bool        Config::onBottom                = false;
@@ -110,7 +111,7 @@ using Config::Values::CStringValue;
 
 struct SPluginConfigValues {
     SP<CColorValue> panelColor, panelBorderColor, workspaceActiveBackground, workspaceInactiveBackground, workspaceActiveBorder, workspaceInactiveBorder;
-    SP<CIntValue>   panelHeight, panelBorderWidth, workspaceMargin, reservedArea, workspaceBorderSize, gapsIn, gapsOut;
+    SP<CIntValue>   panelHeight, panelBorderWidth, workspaceMargin, reservedArea, workspaceBorderSize, workspacePreviewCropTop, gapsIn, gapsOut;
     SP<CBoolValue>  adaptiveHeight, centerAligned, onBottom, hideBackgroundLayers, hideTopLayers, hideOverlayLayers, drawActiveWorkspace, hideRealLayers, affectStrut, overrideGaps;
     SP<CBoolValue>  autoDrag, autoScroll, exitOnClick, switchOnDrop, exitOnSwitch, showNewWorkspace, showEmptyWorkspace, showSpecialWorkspace;
     SP<CIntValue>   swipeFingers, swipeDistance, swipeForceSpeed, clickReleaseThresholdMs;
@@ -205,6 +206,8 @@ void registerConfigValues() {
     g_pluginConfigValues.workspaceMargin    = registerPluginValue(SP<CIntValue>(new CIntValue("plugin:hyprspace:workspace_margin", "Spacing between workspace previews", Config::workspaceMargin)));
     g_pluginConfigValues.reservedArea       = registerPluginValue(SP<CIntValue>(new CIntValue("plugin:hyprspace:reserved_area", "Padding reserved inside the overview panel", Config::reservedArea)));
     g_pluginConfigValues.workspaceBorderSize = registerPluginValue(SP<CIntValue>(new CIntValue("plugin:hyprspace:workspace_border_size", "Workspace preview border width", Config::workspaceBorderSize)));
+    g_pluginConfigValues.workspacePreviewCropTop =
+        registerPluginValue(SP<CIntValue>(new CIntValue("plugin:hyprspace:workspace_preview_crop_top", "Logical pixels cropped from the top of workspace previews", Config::workspacePreviewCropTop, {.min = 0})));
 
     g_pluginConfigValues.adaptiveHeight       = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:adaptive_height", "Reserved for future adaptive overview sizing", Config::adaptiveHeight)));
     g_pluginConfigValues.centerAligned        = registerPluginValue(SP<CBoolValue>(new CBoolValue("plugin:hyprspace:center_aligned", "Center workspace previews when they fit", Config::centerAligned)));
@@ -559,6 +562,7 @@ void reloadConfig() {
     Config::workspaceMargin      = readIntValue(g_pluginConfigValues.workspaceMargin, Config::workspaceMargin);
     Config::reservedArea         = readIntValue(g_pluginConfigValues.reservedArea, Config::reservedArea);
     Config::workspaceBorderSize  = readIntValue(g_pluginConfigValues.workspaceBorderSize, Config::workspaceBorderSize);
+    Config::workspacePreviewCropTop = readIntValue(g_pluginConfigValues.workspacePreviewCropTop, Config::workspacePreviewCropTop);
     Config::adaptiveHeight       = readBoolValue(g_pluginConfigValues.adaptiveHeight, Config::adaptiveHeight);
     Config::centerAligned        = readBoolValue(g_pluginConfigValues.centerAligned, Config::centerAligned);
     Config::onBottom             = readBoolValue(g_pluginConfigValues.onBottom, Config::onBottom);
