@@ -22,6 +22,11 @@ class CHyprspaceWidget {
     // for storing the layer alpha values prior to overview activation (which sets all panel to transparent when configured)
     std::vector<std::tuple<PHLLS, float>> oLayerAlpha;
 
+    // for temporarily disabling blur on real workspace windows while overview is visible
+    std::vector<PHLWINDOWREF> oWindowNoBlur;
+
+    bool suppressingBarBlur = false;
+
     // for click-to-exit
     std::chrono::system_clock::time_point lastPressedTime = std::chrono::high_resolution_clock::now();
 
@@ -39,6 +44,11 @@ class CHyprspaceWidget {
     PHLANIMVAR<float> workspaceScrollOffset;
 
     void restoreHiddenLayers();
+    void hideRealLayers(PHLMONITOR owner);
+    void applyWindowNoBlur(PHLMONITOR owner);
+    void restoreWindowNoBlur();
+    void disableOverviewBarBlur();
+    void restoreOverviewBarBlur();
     void restoreFullscreenWindows();
     void resetAnimationState(PHLMONITOR owner);
 

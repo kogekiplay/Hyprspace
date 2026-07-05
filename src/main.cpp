@@ -67,6 +67,7 @@ bool        Config::disableBlur             = false;
 float       Config::overrideAnimSpeed       = 0.F;
 float       Config::dragAlpha               = 0.2F;
 std::string Config::exitKey                 = "Escape";
+std::string Config::keepRealLayerNamespaces = "";
 int         Config::clickReleaseThresholdMs = 200;
 int         Config::swipeFingers            = 3;
 int         Config::swipeDistance           = 300;
@@ -115,7 +116,7 @@ struct SPluginConfigValues {
     SP<CIntValue>   swipeFingers, swipeDistance, swipeForceSpeed, clickReleaseThresholdMs;
     SP<CBoolValue>  disableGestures, reverseSwipe, disableBlur;
     SP<CFloatValue> swipeCancelRatio, swipeThreshold, swipeClosedPadding, workspaceScrollSpeed, overrideAnimSpeed, dragAlpha;
-    SP<CStringValue> exitKey;
+    SP<CStringValue> exitKey, keepRealLayerNamespaces;
 };
 
 SPluginConfigValues g_pluginConfigValues;
@@ -241,6 +242,8 @@ void registerConfigValues() {
     g_pluginConfigValues.overrideAnimSpeed = registerPluginValue(SP<CFloatValue>(new CFloatValue("plugin:hyprspace:override_anim_speed", "Override the window animation speed used by the overview", Config::overrideAnimSpeed, {.min = 0.F})));
     g_pluginConfigValues.dragAlpha        = registerPluginValue(SP<CFloatValue>(new CFloatValue("plugin:hyprspace:drag_alpha", "Temporary alpha applied to dragged windows inside the overview", Config::dragAlpha, {.min = 0.F, .max = 1.F})));
     g_pluginConfigValues.exitKey          = registerPluginValue(SP<CStringValue>(new CStringValue("plugin:hyprspace:exit_key", "Keysyms used to close the overview, empty disables it", Config::exitKey)));
+    g_pluginConfigValues.keepRealLayerNamespaces =
+        registerPluginValue(SP<CStringValue>(new CStringValue("plugin:hyprspace:keep_real_layer_namespaces", "Comma-separated layer namespaces kept visible when hide_real_layers is enabled", Config::keepRealLayerNamespaces)));
     g_pluginConfigValues.clickReleaseThresholdMs = registerPluginValue(SP<CIntValue>(new CIntValue("plugin:hyprspace:click_release_threshold_ms", "Maximum press duration that still counts as a click", Config::clickReleaseThresholdMs, {.min = 0})));
 }
 
@@ -592,6 +595,7 @@ void reloadConfig() {
     Config::overrideAnimSpeed       = readFloatValue(g_pluginConfigValues.overrideAnimSpeed, Config::overrideAnimSpeed);
     Config::dragAlpha               = readFloatValue(g_pluginConfigValues.dragAlpha, Config::dragAlpha);
     Config::exitKey                 = readStringValue(g_pluginConfigValues.exitKey, Config::exitKey);
+    Config::keepRealLayerNamespaces = readStringValue(g_pluginConfigValues.keepRealLayerNamespaces, Config::keepRealLayerNamespaces);
     Config::clickReleaseThresholdMs = readIntValue(g_pluginConfigValues.clickReleaseThresholdMs, Config::clickReleaseThresholdMs);
 
     numWorkspaces = -1;

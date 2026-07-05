@@ -160,6 +160,7 @@ namespace Config {
     extern float overrideAnimSpeed;
     extern float dragAlpha;
     extern std::string exitKey;
+    extern std::string keepRealLayerNamespaces;
 
     extern int clickReleaseThresholdMs;
     extern int swipeFingers;

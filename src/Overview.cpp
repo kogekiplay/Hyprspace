@@ -2,10 +2,16 @@
 #include "Globals.hpp"
 
 #include <algorithm>
+#include <cctype>
+#include <optional>
 
+#include <hyprland/src/config/ConfigValue.hpp>
 #include <hyprland/src/config/shared/animation/AnimationTree.hpp>
 
 namespace {
+
+std::optional<Config::BOOL> oHyprbarsBarBlur;
+int                         hyprbarsBlurSuppressors = 0;
 
 double panelTravelForMonitor(PHLMONITOR owner) {
     if (!owner)
@@ -30,6 +36,52 @@ void requestFullMonitorRedraw(PHLMONITOR owner) {
     scheduleFrameForMonitor(owner);
 }
 
+Config::BOOL* hyprbarsBarBlurPtr() {
+    static auto hyprbarsBarBlur = CConfigValue<Config::BOOL>("plugin:hyprbars:bar_blur");
+    if (!hyprbarsBarBlur.good())
+        return nullptr;
+
+    return hyprbarsBarBlur.ptr();
+}
+
+std::string compactNamespaceToken(std::string token) {
+    token.erase(std::remove_if(token.begin(), token.end(), [](unsigned char c) { return std::isspace(c); }), token.end());
+    return token;
+}
+
+bool namespaceTokenMatches(const std::string& ns, std::string token) {
+    token = compactNamespaceToken(std::move(token));
+    if (token.empty())
+        return false;
+
+    if (token.ends_with('*'))
+        return ns.starts_with(token.substr(0, token.size() - 1));
+
+    return ns == token;
+}
+
+bool shouldKeepRealLayer(PHLLS layer) {
+    if (!layer)
+        return false;
+
+    const auto& ns   = layer->m_namespace;
+    const auto& list = Config::keepRealLayerNamespaces;
+
+    size_t start = 0;
+    while (start <= list.size()) {
+        const auto end = list.find(',', start);
+        if (namespaceTokenMatches(ns, list.substr(start, end == std::string::npos ? std::string::npos : end - start)))
+            return true;
+
+        if (end == std::string::npos)
+            break;
+
+        start = end + 1;
+    }
+
+    return false;
+}
+
 } // namespace
 
 CHyprspaceWidget::CHyprspaceWidget(uint64_t inOwnerID) : ownerID(inOwnerID) {
@@ -47,10 +99,104 @@ void CHyprspaceWidget::restoreHiddenLayers() {
         if (!layer || !layer->m_mapped)
             continue;
 
+        layerAlpha(layer)->setValueAndWarp(alpha);
         *layerAlpha(layer) = alpha;
     }
 
     oLayerAlpha.clear();
+}
+
+void CHyprspaceWidget::hideRealLayers(PHLMONITOR owner) {
+    if (!owner || !Config::hideRealLayers)
+        return;
+
+    for (int layerIdx : {2, 3}) {
+        for (auto& layerRef : owner->m_layerSurfaceLayers[layerIdx]) {
+            const auto layer = layerRef.lock();
+            if (!layer || shouldKeepRealLayer(layer))
+                continue;
+
+            const bool alreadyHidden = std::ranges::any_of(oLayerAlpha, [&](const auto& hidden) {
+                return std::get<0>(hidden) == layer;
+            });
+            if (alreadyHidden)
+                continue;
+
+            oLayerAlpha.emplace_back(layer, layerAlpha(layer)->goal());
+            layerAlpha(layer)->setValueAndWarp(0.F);
+            *layerAlpha(layer) = 0.F;
+        }
+    }
+}
+
+void CHyprspaceWidget::applyWindowNoBlur(PHLMONITOR owner) {
+    if (!owner)
+        return;
+
+    for (const auto& window : windows()) {
+        if (!window || !window->m_isMapped || !window->m_workspace || !window->m_workspace->m_monitor || window->m_workspace->m_monitor->m_id != ownerID)
+            continue;
+
+        if (window->m_ruleApplicator->noBlur().valueOrDefault())
+            continue;
+
+        const bool alreadyStored = std::ranges::any_of(oWindowNoBlur, [&](const auto& storedRef) {
+            return storedRef.lock() == window;
+        });
+        if (alreadyStored)
+            continue;
+
+        oWindowNoBlur.emplace_back(window);
+        window->m_ruleApplicator->noBlur().set(true, Desktop::Types::PRIORITY_SET_PROP);
+    }
+}
+
+void CHyprspaceWidget::restoreWindowNoBlur() {
+    for (const auto& windowRef : oWindowNoBlur) {
+        const auto window = windowRef.lock();
+        if (!window)
+            continue;
+
+        window->m_ruleApplicator->noBlur().unset(Desktop::Types::PRIORITY_SET_PROP);
+    }
+
+    oWindowNoBlur.clear();
+}
+
+void CHyprspaceWidget::disableOverviewBarBlur() {
+    if (suppressingBarBlur)
+        return;
+
+    suppressingBarBlur = true;
+    if (hyprbarsBlurSuppressors++ > 0)
+        return;
+
+    auto* barBlur = hyprbarsBarBlurPtr();
+    if (!barBlur)
+        return;
+
+    oHyprbarsBarBlur = *barBlur;
+    *barBlur = false;
+}
+
+void CHyprspaceWidget::restoreOverviewBarBlur() {
+    if (!suppressingBarBlur)
+        return;
+
+    suppressingBarBlur = false;
+    if (hyprbarsBlurSuppressors <= 0) {
+        hyprbarsBlurSuppressors = 0;
+        return;
+    }
+
+    if (--hyprbarsBlurSuppressors > 0)
+        return;
+
+    auto* barBlur = hyprbarsBarBlurPtr();
+    if (barBlur && oHyprbarsBarBlur)
+        *barBlur = *oHyprbarsBarBlur;
+
+    oHyprbarsBarBlur.reset();
 }
 
 void CHyprspaceWidget::restoreFullscreenWindows() {
@@ -86,6 +232,8 @@ void CHyprspaceWidget::resetAnimationState(PHLMONITOR owner) {
 
 void CHyprspaceWidget::cleanup(PHLMONITOR owner) {
     restoreHiddenLayers();
+    restoreWindowNoBlur();
+    restoreOverviewBarBlur();
     restoreFullscreenWindows();
     workspaceBoxes.clear();
     if (overviewDragActive && g_layoutManager->dragController()->target())
@@ -114,6 +262,9 @@ void CHyprspaceWidget::show() {
     if (!owner || !owner->m_enabled || compositorUnsafe())
         return;
 
+    if (active)
+        return;
+
     if (prevFullscreen.empty()) {
         for (auto& ws : workspaceList()) {
             if (!ws || !ws->m_monitor || ws->m_monitor->m_id != ownerID)
@@ -131,18 +282,9 @@ void CHyprspaceWidget::show() {
         }
     }
 
-    if (oLayerAlpha.empty() && Config::hideRealLayers) {
-        for (int layerIdx : {2, 3}) {
-            for (auto& layerRef : owner->m_layerSurfaceLayers[layerIdx]) {
-                const auto layer = layerRef.lock();
-                if (!layer)
-                    continue;
-
-                oLayerAlpha.emplace_back(layer, layerAlpha(layer)->goal());
-                *layerAlpha(layer) = 0.F;
-            }
-        }
-    }
+    disableOverviewBarBlur();
+    hideRealLayers(owner);
+    applyWindowNoBlur(owner);
 
     active = true;
 
@@ -162,6 +304,8 @@ void CHyprspaceWidget::hide() {
         return;
 
     restoreHiddenLayers();
+    restoreWindowNoBlur();
+    restoreOverviewBarBlur();
     restoreFullscreenWindows();
 
     active = false;
