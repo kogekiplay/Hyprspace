@@ -15,6 +15,16 @@ class InputDragStateTest(unittest.TestCase):
         self.assertIn("overviewDragActive && targetWindow", input_cpp)
         self.assertIn("overviewDragActive = false", input_cpp)
 
+    def test_real_window_decorations_can_receive_clicks_while_overview_is_active(self):
+        overview_hpp = (ROOT / "src" / "Overview.hpp").read_text()
+        input_cpp = (ROOT / "src" / "Input.cpp").read_text()
+
+        self.assertIn("passingThroughActiveWindowDecoration", overview_hpp)
+        self.assertIn("activeWorkspaceDecorationAt", input_cpp)
+        self.assertIn("Desktop::View::INPUT_EXTENTS", input_cpp)
+        self.assertIn("Desktop::View::WINDOW_ONLY", input_cpp)
+        self.assertIn("return true;", input_cpp)
+
     def test_toggle_all_closes_when_any_overview_widget_is_active(self):
         main_cpp = (ROOT / "src" / "main.cpp").read_text()
 

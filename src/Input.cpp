@@ -23,12 +23,40 @@ double swipeVisibleThreshold() {
     return Config::swipeThreshold;
 }
 
+PHLWINDOW activeWorkspaceDecorationAt(PHLMONITOR owner, Vector2D coords) {
+    if (!owner || !owner->m_activeWorkspace)
+        return nullptr;
+
+    const auto& allWindows = windows();
+    for (auto it = allWindows.rbegin(); it != allWindows.rend(); ++it) {
+        const auto& window = *it;
+        if (!window || !window->m_isMapped || window->m_workspace != owner->m_activeWorkspace)
+            continue;
+
+        const auto inputBox  = window->getWindowBoxUnified(Desktop::View::INPUT_EXTENTS);
+        const auto windowBox = window->getWindowBoxUnified(Desktop::View::WINDOW_ONLY);
+        if (inputBox.containsPoint(coords) && !windowBox.containsPoint(coords))
+            return window;
+    }
+
+    return nullptr;
+}
+
 } // namespace
 
 bool CHyprspaceWidget::buttonEvent(bool pressed, Vector2D coords) {
     const auto owner = getOwner();
     if (!owner)
         return true;
+
+    if (pressed) {
+        passingThroughActiveWindowDecoration = activeWorkspaceDecorationAt(owner, coords) != nullptr;
+        if (passingThroughActiveWindowDecoration)
+            return true;
+    } else if (passingThroughActiveWindowDecoration) {
+        passingThroughActiveWindowDecoration = false;
+        return true;
+    }
 
     bool couldExit = false;
     if (pressed) {

@@ -238,6 +238,7 @@ void CHyprspaceWidget::cleanup(PHLMONITOR owner) {
     if (overviewDragActive && g_layoutManager->dragController()->target())
         g_layoutManager->endDragTarget();
     overviewDragActive = false;
+    passingThroughActiveWindowDecoration = false;
     swiping           = false;
     activeBeforeSwipe = false;
     avgSwipeSpeed     = 0.;
@@ -303,6 +304,7 @@ void CHyprspaceWidget::hide() {
     restoreWindowNoBlur();
     restoreOverviewBarBlur();
     restoreFullscreenWindows();
+    passingThroughActiveWindowDecoration = false;
 
     active = false;
 
