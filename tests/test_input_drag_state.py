@@ -24,7 +24,13 @@ class InputDragStateTest(unittest.TestCase):
         self.assertIn("Desktop::View::RESERVED_EXTENTS", input_cpp)
         self.assertIn("Desktop::View::INPUT_EXTENTS", input_cpp)
         self.assertIn("Desktop::View::WINDOW_ONLY", input_cpp)
+        self.assertIn('CConfigValue<Config::INTEGER>("plugin:hyprbars:bar_height")', input_cpp)
+        self.assertIn("hyprbarsBarBoxForWindow", input_cpp)
+        self.assertIn("hyprbarsFallbackBarBoxesForWindow", input_cpp)
+        self.assertIn("windowBox.y - barHeight", input_cpp)
+        self.assertIn("inPartOfWindowTitleBar", input_cpp)
         self.assertIn("return true;", input_cpp)
+        self.assertNotIn("Config::Actions::closeWindow(window)", input_cpp)
 
     def test_toggle_all_closes_when_any_overview_widget_is_active(self):
         main_cpp = (ROOT / "src" / "main.cpp").read_text()

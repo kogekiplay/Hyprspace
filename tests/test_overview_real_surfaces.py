@@ -73,6 +73,12 @@ class OverviewRealSurfacesTest(unittest.TestCase):
         self.assertIn("Render::RENDER_PASS_MAIN", redraw_fn)
         self.assertNotIn("renderWindowStub", redraw_fn)
 
+    def test_active_workspace_redraw_skips_unmapped_windows(self):
+        render_cpp = (ROOT / "src" / "Render.cpp").read_text()
+        redraw_all_fn = render_cpp[render_cpp.index("void redrawActiveWorkspaceWindows") : render_cpp.index("} // namespace")]
+
+        self.assertIn("!window->m_isMapped", redraw_all_fn)
+
     def test_fullscreen_blur_is_not_drawn_during_close_animation(self):
         render_cpp = (ROOT / "src" / "Render.cpp").read_text()
 

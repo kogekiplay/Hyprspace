@@ -252,7 +252,7 @@ void redrawActiveWorkspaceWindows(PHLMONITOR owner, CBox clipBox, const Time::st
 
     SWorkspaceWindows activeWindows;
     for (const auto& window : windows()) {
-        if (!window || window->m_workspace != activeWorkspace)
+        if (!window || !window->m_isMapped || window->m_workspace != activeWorkspace)
             continue;
 
         if (window->m_isFloating)
@@ -272,7 +272,7 @@ void redrawActiveWorkspaceWindows(PHLMONITOR owner, CBox clipBox, const Time::st
         redrawActiveWorkspaceWindow(window, activeWorkspace, owner, clipBox, time);
     }
 
-    if (focused && focused->m_isFloating)
+    if (focused && focused->m_isMapped && focused->m_isFloating)
         redrawActiveWorkspaceWindow(focused, activeWorkspace, owner, clipBox, time);
 }
 

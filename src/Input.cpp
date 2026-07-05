@@ -2,9 +2,11 @@
 #include "Globals.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 #include <hyprland/src/desktop/view/Window.hpp>
+#include <hyprland/src/helpers/MiscFunctions.hpp>
 
 namespace {
 
@@ -23,6 +25,41 @@ double swipeVisibleThreshold() {
     return Config::swipeThreshold;
 }
 
+double hyprbarsBarHeight() {
+    static auto hyprbarsBarHeight = CConfigValue<Config::INTEGER>("plugin:hyprbars:bar_height");
+    if (!hyprbarsBarHeight.good())
+        return 0.;
+
+    return std::max<Config::INTEGER>(*hyprbarsBarHeight.ptr(), 0);
+}
+
+CBox hyprbarsBarBoxForWindow(PHLWINDOW window) {
+    if (!window)
+        return {};
+
+    const auto barHeight = hyprbarsBarHeight();
+    if (barHeight <= 0)
+        return {};
+
+    const auto inputBox = window->getWindowBoxUnified(Desktop::View::RESERVED_EXTENTS | Desktop::View::INPUT_EXTENTS);
+    return {inputBox.x, inputBox.y, inputBox.w, barHeight};
+}
+
+std::array<CBox, 2> hyprbarsFallbackBarBoxesForWindow(PHLWINDOW window) {
+    if (!window)
+        return {};
+
+    const auto barHeight = hyprbarsBarHeight();
+    if (barHeight <= 0)
+        return {};
+
+    const auto windowBox = window->getWindowBoxUnified(Desktop::View::WINDOW_ONLY);
+    return {{
+        {windowBox.x, windowBox.y - barHeight, windowBox.w, barHeight},
+        {windowBox.x, windowBox.y, windowBox.w, barHeight},
+    }};
+}
+
 PHLWINDOW activeWorkspaceDecorationAt(PHLMONITOR owner, Vector2D coords) {
     if (!owner || !owner->m_activeWorkspace)
         return nullptr;
@@ -35,7 +72,12 @@ PHLWINDOW activeWorkspaceDecorationAt(PHLMONITOR owner, Vector2D coords) {
 
         const auto inputBox  = window->getWindowBoxUnified(Desktop::View::RESERVED_EXTENTS | Desktop::View::INPUT_EXTENTS);
         const auto windowBox = window->getWindowBoxUnified(Desktop::View::WINDOW_ONLY);
-        if (inputBox.containsPoint(coords) && !windowBox.containsPoint(coords))
+        const auto barBox    = hyprbarsBarBoxForWindow(window);
+        bool       inPartOfWindowTitleBar = barBox.containsPoint(coords);
+        for (const auto& fallbackBarBox : hyprbarsFallbackBarBoxesForWindow(window))
+            inPartOfWindowTitleBar = inPartOfWindowTitleBar || fallbackBarBox.containsPoint(coords);
+
+        if ((inputBox.containsPoint(coords) && !windowBox.containsPoint(coords)) || inPartOfWindowTitleBar)
             return window;
     }
 
