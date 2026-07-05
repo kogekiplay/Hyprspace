@@ -30,9 +30,6 @@ bool CHyprspaceWidget::buttonEvent(bool pressed, Vector2D coords) {
     if (!owner)
         return true;
 
-    const auto dragTarget   = g_layoutManager->dragController()->target();
-    const auto targetWindow = dragTarget ? dragTarget->window() : nullptr;
-
     bool couldExit = false;
     if (pressed) {
         lastPressedTime = std::chrono::high_resolution_clock::now();
@@ -54,21 +51,30 @@ bool CHyprspaceWidget::buttonEvent(bool pressed, Vector2D coords) {
     if (!targetWorkspace && targetWorkspaceID >= SPECIAL_WORKSPACE_START)
         targetWorkspace = createWorkspace(targetWorkspaceID, owner->m_id);
 
-    if (Config::autoDrag && (targetWorkspace == nullptr || !pressed)) {
+    if (pressed) {
         if (g_layoutManager->dragController()->target())
             g_layoutManager->endDragTarget();
 
-        if (pressed) {
+        overviewDragActive = false;
+
+        if (Config::autoDrag && targetWorkspace == nullptr) {
             const auto window = windowAt(coords);
             if (window) {
                 const auto target = window->layoutTarget();
-                if (target)
+                if (target) {
                     g_layoutManager->beginDragTarget(target, MBIND_MOVE);
+                    overviewDragActive = true;
+                }
             }
         }
     }
 
-    if (targetWindow && targetWorkspace != nullptr && !pressed) {
+    const auto dragTarget             = g_layoutManager->dragController()->target();
+    const auto targetWindow           = (!pressed && overviewDragActive && dragTarget) ? dragTarget->window() : nullptr;
+    const bool shouldEndOverviewDrag  = !pressed && overviewDragActive;
+    const bool shouldDropOverviewDrag = overviewDragActive && targetWindow && targetWorkspace != nullptr && !pressed;
+
+    if (shouldDropOverviewDrag) {
         Desktop::globalWindowController()->moveWindowToWorkspace(targetWindow, targetWorkspace);
         if (targetWindow->m_isFloating) {
             const auto targetPos = owner->m_position + (owner->m_size / 2.) - (targetWindow->m_reportedSize / 2.);
@@ -94,6 +100,13 @@ bool CHyprspaceWidget::buttonEvent(bool pressed, Vector2D coords) {
             hide();
     } else if (Config::exitOnClick && targetWorkspace == nullptr && active && couldExit && !pressed) {
         hide();
+    }
+
+    if (shouldEndOverviewDrag) {
+        if (g_layoutManager->dragController()->target())
+            g_layoutManager->endDragTarget();
+
+        overviewDragActive = false;
     }
 
     // While overview is active all left-click input is consumed by the panel.

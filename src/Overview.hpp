@@ -25,6 +25,8 @@ class CHyprspaceWidget {
     // for click-to-exit
     std::chrono::system_clock::time_point lastPressedTime = std::chrono::high_resolution_clock::now();
 
+    bool overviewDragActive = false;
+
     bool swiping = false;
     // whether if the panel is active before the current swiping event
     bool activeBeforeSwipe = false;
