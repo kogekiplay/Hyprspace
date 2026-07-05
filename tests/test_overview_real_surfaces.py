@@ -43,7 +43,7 @@ class OverviewRealSurfacesTest(unittest.TestCase):
         render_cpp = (ROOT / "src" / "Render.cpp").read_text()
 
         self.assertNotIn("if (active)\n        return;", overview_cpp)
-        self.assertIn("hideRealLayers(owner);", render_cpp)
+        self.assertIn("if (active)\n        hideRealLayers(owner);", render_cpp)
         self.assertIn("alreadyHidden", overview_cpp)
         self.assertIn("layerAlpha(layer)->setValueAndWarp(0.F);", overview_cpp)
 
