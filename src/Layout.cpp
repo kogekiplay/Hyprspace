@@ -3,15 +3,15 @@
 
 #include <algorithm>
 #include <optional>
-#include <string>
 #include <utility>
 
-#include <hyprland/src/config/legacy/ConfigManager.hpp>
 #include <hyprland/src/config/shared/complex/ComplexDataTypes.hpp>
+#include <hyprland/src/config/shared/workspace/WorkspaceRuleManager.hpp>
+#include <hyprland/src/config/supplementary/propRefresher/PropRefresher.hpp>
 
 namespace {
 
-std::optional<std::pair<std::string, std::string>> currentGlobalGapRules() {
+std::optional<std::pair<Config::CCssGapData, Config::CCssGapData>> currentGlobalGapRules() {
     static auto gapsInData  = CConfigValue<Config::IComplexConfigValue>("general:gaps_in");
     static auto gapsOutData = CConfigValue<Config::IComplexConfigValue>("general:gaps_out");
     if (!gapsInData.good() || !gapsOutData.good())
@@ -24,17 +24,19 @@ std::optional<std::pair<std::string, std::string>> currentGlobalGapRules() {
 
     const auto* gapsIn  = static_cast<Config::CCssGapData*>(gapsInBase);
     const auto* gapsOut = static_cast<Config::CCssGapData*>(gapsOutBase);
-    return std::make_pair(gapsIn->toString(), gapsOut->toString());
+    return std::make_pair(*gapsIn, *gapsOut);
 }
 
-bool applyWorkspaceGaps(WORKSPACEID id, const std::string& gapsIn, const std::string& gapsOut) {
-    const auto legacy = Config::Legacy::mgr().lock();
-    if (!legacy)
-        return false;
+void applyWorkspaceGaps(WORKSPACEID id, const Config::CCssGapData& gapsIn, const Config::CCssGapData& gapsOut) {
+    Config::CWorkspaceRule rule;
+    rule.m_workspaceString = std::to_string(id);
+    rule.m_workspaceName   = std::to_string(id);
+    rule.m_workspaceId     = id;
+    rule.m_gapsIn          = gapsIn;
+    rule.m_gapsOut         = gapsOut;
 
-    const auto rule = std::to_string(id) + ", gapsin:" + gapsIn + ", gapsout:" + gapsOut;
-    legacy->handleWorkspaceRules("", rule);
-    return true;
+    Config::workspaceRuleMgr()->replaceOrAdd(std::move(rule));
+    Config::Supplementary::refresher()->scheduleRefresh(Config::Supplementary::REFRESH_MONITOR_STATES | Config::Supplementary::REFRESH_WINDOW_STATES);
 }
 
 } // namespace
@@ -69,7 +71,7 @@ void CHyprspaceWidget::updateLayout() {
                     }
 
                     monitor->m_activeWorkspace = activeWorkspace;
-                    applyWorkspaceGaps(monitor->activeWorkspaceID(), std::to_string(Config::gapsIn), std::to_string(Config::gapsOut));
+                    applyWorkspaceGaps(monitor->activeWorkspaceID(), Config::CCssGapData(Config::gapsIn), Config::CCssGapData(Config::gapsOut));
                 }
             } else {
                 for (const auto& workspace : workspaceList()) {

@@ -25,8 +25,9 @@ class GapOverrideConfigTest(unittest.TestCase):
         self.assertIn("Config::overrideGaps", layout_cpp)
         self.assertIn("Config::gapsIn", layout_cpp)
         self.assertIn("Config::gapsOut", layout_cpp)
-        self.assertIn("gapsin:", layout_cpp)
-        self.assertIn("gapsout:", layout_cpp)
+        self.assertIn("Config::workspaceRuleMgr()->replaceOrAdd", layout_cpp)
+        self.assertIn("rule.m_gapsIn", layout_cpp)
+        self.assertIn("rule.m_gapsOut", layout_cpp)
 
 
 if __name__ == "__main__":
