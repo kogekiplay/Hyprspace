@@ -55,6 +55,22 @@ class OverviewRealSurfacesTest(unittest.TestCase):
         self.assertIn("renderRectWithBlur(monitorClip, Config::overviewBackgroundColor)", render_cpp)
         self.assertNotIn("renderRectWithBlur(panelBox, Config::panelBaseColor)", render_cpp)
 
+    def test_fullscreen_blur_keeps_active_workspace_windows_clear(self):
+        render_cpp = (ROOT / "src" / "Render.cpp").read_text()
+
+        self.assertIn("redrawActiveWorkspaceWindows", render_cpp)
+        self.assertIn("redrawActiveWorkspaceWindows(owner, monitorClip, time)", render_cpp)
+        self.assertLess(
+            render_cpp.index("renderRectWithBlur(monitorClip, Config::overviewBackgroundColor)"),
+            render_cpp.index("redrawActiveWorkspaceWindows(owner, monitorClip, time)"),
+        )
+
+    def test_fullscreen_blur_is_not_drawn_during_close_animation(self):
+        render_cpp = (ROOT / "src" / "Render.cpp").read_text()
+
+        self.assertIn("if (active) {\n        owner->m_blurFBShouldRender = true;", render_cpp)
+        self.assertIn("renderRectWithBlur(monitorClip, Config::overviewBackgroundColor)", render_cpp)
+
     def test_overview_temporarily_disables_hyprbars_blur(self):
         overview_hpp = (ROOT / "src" / "Overview.hpp").read_text()
         overview_cpp = (ROOT / "src" / "Overview.cpp").read_text()

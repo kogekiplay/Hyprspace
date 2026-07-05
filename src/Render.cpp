@@ -227,6 +227,49 @@ bool renderWindowPreview(PHLWINDOW window, PHLWORKSPACE workspace, PHLMONITOR ow
     return true;
 }
 
+void redrawActiveWorkspaceWindow(PHLWINDOW window, PHLWORKSPACE workspace, PHLMONITOR owner, CBox clipBox, const Time::steady_tp& time) {
+    if (!window || !workspace || !owner)
+        return;
+
+    const Vector2D realPosition = window->m_realPosition->value() + window->m_floatingOffset;
+    const Vector2D realSize     = window->m_realSize->value();
+    CBox           redrawBox    = {(realPosition - owner->m_position) * owner->m_scale, realSize * owner->m_scale};
+
+    renderWindowStub(window, owner, workspace, redrawBox, clipBox, time);
+}
+
+void redrawActiveWorkspaceWindows(PHLMONITOR owner, CBox clipBox, const Time::steady_tp& time) {
+    if (!owner || !owner->m_activeWorkspace)
+        return;
+
+    const auto activeWorkspace = owner->m_activeWorkspace;
+
+    SWorkspaceWindows activeWindows;
+    for (const auto& window : windows()) {
+        if (!window || window->m_workspace != activeWorkspace)
+            continue;
+
+        if (window->m_isFloating)
+            activeWindows.floating.push_back(window);
+        else
+            activeWindows.tiled.push_back(window);
+    }
+
+    for (const auto& window : activeWindows.tiled)
+        redrawActiveWorkspaceWindow(window, activeWorkspace, owner, clipBox, time);
+
+    const auto focused = activeWorkspace->getLastFocusedWindow();
+    for (const auto& window : activeWindows.floating) {
+        if (window == focused)
+            continue;
+
+        redrawActiveWorkspaceWindow(window, activeWorkspace, owner, clipBox, time);
+    }
+
+    if (focused && focused->m_isFloating)
+        redrawActiveWorkspaceWindow(focused, activeWorkspace, owner, clipBox, time);
+}
+
 } // namespace
 
 void CHyprspaceWidget::draw() {
@@ -248,8 +291,6 @@ void CHyprspaceWidget::draw() {
     const CBox monitorClip = {{0, 0}, owner->m_transformedSize};
     const auto time        = Time::steadyNow();
 
-    owner->m_blurFBShouldRender = true;
-
     const int panelDirection = Config::onBottom ? -1 : 1;
 
     CBox panelBox = {owner->m_position.x,
@@ -262,10 +303,16 @@ void CHyprspaceWidget::draw() {
 
     g_pHyprRenderer->m_renderData.clipBox = monitorClip;
 
-    if (!Config::disableBlur)
-        renderRectWithBlur(monitorClip, Config::overviewBackgroundColor);
-    else
-        renderRect(monitorClip, Config::overviewBackgroundColor);
+    if (active) {
+        owner->m_blurFBShouldRender = true;
+
+        if (!Config::disableBlur)
+            renderRectWithBlur(monitorClip, Config::overviewBackgroundColor);
+        else
+            renderRect(monitorClip, Config::overviewBackgroundColor);
+
+        redrawActiveWorkspaceWindows(owner, monitorClip, time);
+    }
 
     g_pHyprRenderer->damageMonitor(owner);
 

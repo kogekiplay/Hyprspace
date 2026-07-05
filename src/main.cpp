@@ -464,25 +464,36 @@ void onTouchUp(const ITouch::SUpEvent& event, SCallbackInfo& info) {
     g_pTouchedMonitor = nullptr;
 }
 
+bool anyOverviewActive() {
+    return std::ranges::any_of(g_overviewWidgets, [](const std::shared_ptr<CHyprspaceWidget>& widget) {
+        return widget && widget->isActive();
+    });
+}
+
+void toggleAllOverviews(bool anyActive) {
+    for (auto& overviewWidget : g_overviewWidgets) {
+        if (!overviewWidget)
+            continue;
+
+        if (anyActive && overviewWidget->isActive())
+            overviewWidget->hide();
+        else if (!anyActive && !overviewWidget->isActive())
+            overviewWidget->show();
+    }
+}
+
 static SDispatchResult dispatchToggleOverview(std::string arg) {
-    const auto currentMonitor = monitorFromCursor();
-    const auto widget         = getWidgetForMonitor(currentMonitor);
-    if (!widget)
-        return {};
-
     if (arg.contains("all")) {
-        const bool anyActive = widget->isActive();
-        for (auto& overviewWidget : g_overviewWidgets) {
-            if (!overviewWidget)
-                continue;
+        const bool anyActive = anyOverviewActive();
+        toggleAllOverviews(anyActive);
+    } else {
+        const auto currentMonitor = monitorFromCursor();
+        const auto widget         = getWidgetForMonitor(currentMonitor);
+        if (!widget)
+            return {};
 
-            if (anyActive && overviewWidget->isActive())
-                overviewWidget->hide();
-            else if (!anyActive && !overviewWidget->isActive())
-                overviewWidget->show();
-        }
-    } else
         widget->isActive() ? widget->hide() : widget->show();
+    }
 
     return {};
 }
@@ -520,18 +531,24 @@ static SDispatchResult dispatchCloseOverview(std::string arg) {
 int luaOverview(lua_State* L) {
     const char* arg = luaL_optstring(L, 1, "toggle");
     const std::string command = arg ? arg : "toggle";
+    const auto        currentMonitorBeforeReload = monitorFromCursor();
+    const auto        currentWidgetBeforeReload  = getWidgetForMonitor(currentMonitorBeforeReload);
+    const bool        currentWidgetActiveBeforeReload = currentWidgetBeforeReload && currentWidgetBeforeReload->isActive();
+    const bool anyActiveBeforeReload = anyOverviewActive();
 
     // Pull the latest Lua-side config into the runtime snapshot before changing overview state.
     reloadConfig();
 
-    if (command == "toggle")
-        dispatchToggleOverview("");
-    else if (command == "open")
+    if (command == "toggle") {
+        const auto widget = getWidgetForMonitor(currentMonitorBeforeReload);
+        if (widget)
+            currentWidgetActiveBeforeReload ? widget->hide() : widget->show();
+    } else if (command == "open")
         dispatchOpenOverview("");
     else if (command == "close")
         dispatchCloseOverview("");
     else if (command == "toggle_all")
-        dispatchToggleOverview("all");
+        toggleAllOverviews(anyActiveBeforeReload);
     else if (command == "open_all")
         dispatchOpenOverview("all");
     else if (command == "close_all")

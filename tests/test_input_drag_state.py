@@ -15,6 +15,22 @@ class InputDragStateTest(unittest.TestCase):
         self.assertIn("overviewDragActive && targetWindow", input_cpp)
         self.assertIn("overviewDragActive = false", input_cpp)
 
+    def test_toggle_all_closes_when_any_overview_widget_is_active(self):
+        main_cpp = (ROOT / "src" / "main.cpp").read_text()
+
+        self.assertIn("bool anyOverviewActive()", main_cpp)
+        self.assertIn("const bool anyActive = anyOverviewActive();", main_cpp)
+        self.assertNotIn("const bool anyActive = widget->isActive();", main_cpp)
+        self.assertLess(main_cpp.index('if (arg.contains("all"))'), main_cpp.index("const auto currentMonitor"))
+
+    def test_lua_toggle_uses_active_state_from_before_config_reload(self):
+        main_cpp = (ROOT / "src" / "main.cpp").read_text()
+        lua_overview = main_cpp[main_cpp.index("int luaOverview") :]
+
+        self.assertIn("const bool anyActiveBeforeReload = anyOverviewActive();", lua_overview)
+        self.assertLess(lua_overview.index("const bool anyActiveBeforeReload = anyOverviewActive();"), lua_overview.index("reloadConfig();"))
+        self.assertIn("toggleAllOverviews(anyActiveBeforeReload);", lua_overview)
+
 
 if __name__ == "__main__":
     unittest.main()
