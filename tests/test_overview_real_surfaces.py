@@ -38,6 +38,15 @@ class OverviewRealSurfacesTest(unittest.TestCase):
         self.assertIn("m_namespace", overview_cpp)
         self.assertIn("setValueAndWarp(0.F)", overview_cpp)
 
+    def test_active_overview_refresh_rehides_real_layers(self):
+        overview_cpp = (ROOT / "src" / "Overview.cpp").read_text()
+        render_cpp = (ROOT / "src" / "Render.cpp").read_text()
+
+        self.assertNotIn("if (active)\n        return;", overview_cpp)
+        self.assertIn("hideRealLayers(owner);", render_cpp)
+        self.assertIn("alreadyHidden", overview_cpp)
+        self.assertIn("layerAlpha(layer)->setValueAndWarp(0.F);", overview_cpp)
+
 
 if __name__ == "__main__":
     unittest.main()

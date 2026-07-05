@@ -162,6 +162,8 @@ void CHyprspaceWidget::draw() {
     if (!owner || !owner->m_enabled)
         return;
 
+    hideRealLayers(owner);
+
     const CBox monitorClip = {{0, 0}, owner->m_transformedSize};
     const auto time        = Time::steadyNow();
 

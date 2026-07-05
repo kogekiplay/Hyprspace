@@ -119,10 +119,9 @@ void CHyprspaceWidget::hideRealLayers(PHLMONITOR owner) {
             const bool alreadyHidden = std::ranges::any_of(oLayerAlpha, [&](const auto& hidden) {
                 return std::get<0>(hidden) == layer;
             });
-            if (alreadyHidden)
-                continue;
+            if (!alreadyHidden)
+                oLayerAlpha.emplace_back(layer, layerAlpha(layer)->goal());
 
-            oLayerAlpha.emplace_back(layer, layerAlpha(layer)->goal());
             layerAlpha(layer)->setValueAndWarp(0.F);
             *layerAlpha(layer) = 0.F;
         }
@@ -260,9 +259,6 @@ PHLMONITOR CHyprspaceWidget::getOwner() {
 void CHyprspaceWidget::show() {
     auto owner = getOwner();
     if (!owner || !owner->m_enabled || compositorUnsafe())
-        return;
-
-    if (active)
         return;
 
     if (prevFullscreen.empty()) {
