@@ -78,6 +78,7 @@ void renderWindowStub(PHLWINDOW window, PHLMONITOR monitor, PHLWORKSPACE workspa
     window->m_isFloating = false;
     window->m_pinned     = true;
     window->m_ruleApplicator->rounding().set(window->rounding() * scaleMod * monitor->m_scale, Desktop::Types::PRIORITY_SET_PROP);
+    window->m_ruleApplicator->noBlur().set(true, Desktop::Types::PRIORITY_SET_PROP);
 
     Hyprutils::Utils::CScopeGuard restoreWindowState([&] {
         window->m_workspace       = workspace;
@@ -86,6 +87,7 @@ void renderWindowStub(PHLWINDOW window, PHLMONITOR monitor, PHLWORKSPACE workspa
         window->m_isFloating = floating;
         window->m_pinned     = pinned;
         window->m_ruleApplicator->rounding().unset(Desktop::Types::PRIORITY_SET_PROP);
+        window->m_ruleApplicator->noBlur().unset(Desktop::Types::PRIORITY_SET_PROP);
     });
 
     g_pHyprRenderer->m_renderPass.add(makeUnique<CRendererHintsPassElement>(CRendererHintsPassElement::SData{.renderModif = renderModif}));

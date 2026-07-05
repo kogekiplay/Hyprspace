@@ -29,6 +29,12 @@ class GapOverrideConfigTest(unittest.TestCase):
         self.assertIn("rule.m_gapsIn", layout_cpp)
         self.assertIn("rule.m_gapsOut", layout_cpp)
 
+    def test_window_preview_temporarily_disables_blur(self):
+        render_cpp = (ROOT / "src" / "Render.cpp").read_text()
+
+        self.assertIn("m_ruleApplicator->noBlur().set(true", render_cpp)
+        self.assertIn("m_ruleApplicator->noBlur().unset", render_cpp)
+
 
 if __name__ == "__main__":
     unittest.main()
